@@ -1,12 +1,13 @@
-// Simple TypeScript example
-let greeting: string = "Hello, C++!";
-console.log(greeting);
+import { PrintVisitor } from './src/parser/PrintVisitor';
+import * as ast from './src/parser/ast';
 
-// Basic function
-function add(a: number, b: number): number {
-    return a + b;
-}
+const astRoot: ast.ProgramNode = {
+  type: 'Program',
+  body: [
+    { type: 'Identifier', name: 'x', accept: ast.IdentifierNode.prototype.accept },
+    { type: 'NumericLiteral', value: 42, accept: ast.NumericLiteralNode.prototype.accept },
+  ],
+  accept: ast.ProgramNode.prototype.accept
+};
 
-// Show function result
-const result = add(2, 3);
-console.log(`2 + 3 = ${result}`);
+astRoot.accept(new PrintVisitor());
