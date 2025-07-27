@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "ts-node src/cli/index.ts"
+    "dev": "node --no-warnings -r ts-node/register src/cli/index.ts"
   },
   "bin": {
     "ts2cpp": "dist/cli/index.js"
