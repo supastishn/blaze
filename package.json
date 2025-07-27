@@ -1,16 +1,15 @@
 {
-  "name": "my-ts-cli",
+  "name": "ts2cpp",
   "version": "1.0.0",
-  "description": "TypeScript CLI tool base",
-  "main": "dist/index.js",
+  "description": "TypeScript to C++ Compiler",
+  "main": "dist/compiler/index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "ts-node src/index.ts"
+    "dev": "ts-node src/cli/index.ts"
   },
   "bin": {
-    "mycli": "dist/cli.js"
+    "ts2cpp": "dist/cli/index.js"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
