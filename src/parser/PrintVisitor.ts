@@ -6,6 +6,8 @@ export class PrintVisitor implements ast.Visitor {
   Program(node: ast.ProgramNode) {
     console.log(`${'  '.repeat(this.depth)}Program [${node.body.length} statements]`);
     this.depth++;
+    node.body.forEach(stmt => stmt.accept(this));
+    this.depth--;
   }
 
   Identifier(node: ast.IdentifierNode) {
@@ -15,6 +17,19 @@ export class PrintVisitor implements ast.Visitor {
   NumericLiteral(node: ast.NumericLiteralNode) {
     console.log(`${'  '.repeat(this.depth)}Number: ${node.value}`);
   }
-  
-  // Add methods for other node types
+
+  AssignmentExpression(node: ast.AssignmentExpressionNode) {
+    console.log(`${'  '.repeat(this.depth)}AssignmentExpression:`);
+    this.depth++;
+    node.left.accept(this);
+    node.right.accept(this);
+    this.depth--;
+  }
+
+  ExpressionStatement(node: ast.ExpressionStatementNode) {
+    console.log(`${'  '.repeat(this.depth)}ExpressionStatement:`);
+    this.depth++;
+    node.expression.accept(this);
+    this.depth--;
+  }
 }

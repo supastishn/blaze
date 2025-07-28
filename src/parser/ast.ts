@@ -2,7 +2,8 @@ export interface Visitor {
   Program(node: ProgramNode): void;
   Identifier(node: IdentifierNode): void;
   NumericLiteral(node: NumericLiteralNode): void;
-  // Add handlers for other node types here
+  AssignmentExpression(node: AssignmentExpressionNode): void;
+  ExpressionStatement(node: ExpressionStatementNode): void;
 }
 
 // Add accept() methods to all node interfaces
@@ -11,8 +12,8 @@ export interface NodeBase {
   accept(visitor: Visitor): void;
 }
 
-export type Node = ProgramNode | IdentifierNode | NumericLiteralNode;
-// ... other AST node types ...
+export type Node = ProgramNode | IdentifierNode | NumericLiteralNode
+    | AssignmentExpressionNode | ExpressionStatementNode;
 
 export interface ProgramNode extends NodeBase {
   type: 'Program';
@@ -29,6 +30,17 @@ export interface NumericLiteralNode extends NodeBase {
   value: number;
 }
 
+export interface AssignmentExpressionNode extends NodeBase {
+  type: 'AssignmentExpression';
+  left: IdentifierNode;
+  right: Node;
+}
+
+export interface ExpressionStatementNode extends NodeBase {
+  type: 'ExpressionStatement';
+  expression: Node;
+}
+
 // Implement accept for each node type
 (ProgramNode.prototype as any).accept = function(visitor: Visitor) {
   visitor.Program(this);
@@ -43,4 +55,13 @@ export interface NumericLiteralNode extends NodeBase {
   visitor.NumericLiteral(this);
 };
 
-// Add prototypes for other node types
+(AssignmentExpressionNode.prototype as any).accept = function(visitor: Visitor) {
+  this.left.accept(visitor);
+  this.right.accept(visitor);
+  visitor.AssignmentExpression(this);
+};
+
+(ExpressionStatementNode.prototype as any).accept = function(visitor: Visitor) {
+  this.expression.accept(visitor);
+  visitor.ExpressionStatement(this);
+};
