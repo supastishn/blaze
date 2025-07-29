@@ -42,13 +42,11 @@ export interface ExpressionStatementNode extends NodeBase {
   expression: Node;
 }
 
-// Add new FirstExpression node type
 export interface FirstExpressionNode extends NodeBase {
   type: 'FirstExpression';
   argument: Node;
 }
 
-// Implement accept for each node type
 (ProgramNode.prototype as any).accept = function(visitor: Visitor) {
   visitor.Program(this);
   this.body.forEach((child: Node) => child.accept(visitor));
