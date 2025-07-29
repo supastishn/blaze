@@ -32,4 +32,10 @@ export class PrintVisitor implements ast.Visitor {
     node.expression.accept(this);
     this.depth--;
   }
+  FirstExpression(node: ast.FirstExpressionNode) {
+    console.log(`${'  '.repeat(this.depth)}FirstExpression:`);
+    this.depth++;
+    node.argument.accept(this);
+    this.depth--;
+  }
 }

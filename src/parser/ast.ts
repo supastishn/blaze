@@ -4,6 +4,7 @@ export interface Visitor {
   NumericLiteral(node: NumericLiteralNode): void;
   AssignmentExpression(node: AssignmentExpressionNode): void;
   ExpressionStatement(node: ExpressionStatementNode): void;
+  FirstExpression(node: FirstExpressionNode): void;
 }
 
 // Add accept() methods to all node interfaces
@@ -13,7 +14,7 @@ export interface NodeBase {
 }
 
 export type Node = ProgramNode | IdentifierNode | NumericLiteralNode
-    | AssignmentExpressionNode | ExpressionStatementNode;
+    | AssignmentExpressionNode | ExpressionStatementNode | FirstExpressionNode;
 
 export interface ProgramNode extends NodeBase {
   type: 'Program';
@@ -41,6 +42,12 @@ export interface ExpressionStatementNode extends NodeBase {
   expression: Node;
 }
 
+// Add new FirstExpression node type
+export interface FirstExpressionNode extends NodeBase {
+  type: 'FirstExpression';
+  argument: Node;
+}
+
 // Implement accept for each node type
 (ProgramNode.prototype as any).accept = function(visitor: Visitor) {
   visitor.Program(this);
@@ -64,4 +71,10 @@ export interface ExpressionStatementNode extends NodeBase {
 (ExpressionStatementNode.prototype as any).accept = function(visitor: Visitor) {
   this.expression.accept(visitor);
   visitor.ExpressionStatement(this);
+};
+
+// Add accept method for FirstExpression
+(FirstExpressionNode.prototype as any).accept = function(visitor: Visitor) {
+  this.argument.accept(visitor);
+  visitor.FirstExpression(this);
 };

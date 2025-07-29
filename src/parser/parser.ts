@@ -7,6 +7,7 @@ export const TokenType = {
   NumericLiteral: 'NumericLiteral',
   Assignment: '=',
   Semicolon: ';',
+  First: 'first',
 } as const;
 
 export type TokenType = keyof typeof TokenType;
@@ -25,6 +26,15 @@ export class Lexer {
 
   nextToken(): Token {
     // TODO: Implement tokenization
+    // Example: recognize 'first' keyword
+    // This is a stub implementation, you should replace with real logic
+    // For demonstration, let's just recognize 'first' at the start
+    const trimmed = this.input.slice(this.position).trim();
+    if (trimmed.startsWith('first')) {
+      this.position += 5;
+      return { type: 'First', value: 'first', line: 0, column: this.position - 5 };
+    }
+    // Fallback to EOF
     return { type: 'EOF', value: '', line: 0, column: 0 };
   }
 }
@@ -80,9 +90,21 @@ export class Parser {
         return this.parseIdentifier();
       case 'NumericLiteral':
         return this.parseNumericLiteral();
+      case 'First':
+        return this.parseFirstExpression();
       default:
         throw new Error('Unexpected primary expression');
     }
+  }
+
+  private parseFirstExpression(): ast.FirstExpressionNode {
+    this.eat('First');
+    const argument = this.parseExpression();
+    return {
+      type: 'FirstExpression',
+      argument,
+      accept: (ast.FirstExpressionNode.prototype as any).accept
+    };
   }
 
   private parseIdentifier(): ast.IdentifierNode {
