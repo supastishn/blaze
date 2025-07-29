@@ -7,6 +7,16 @@ export const TokenType = {
   Assignment: '=',
   Semicolon: ';',
   First: 'first',
+  Plus: '+',
+  Minus: '-',
+  Multiply: '*',
+  Divide: '/',
+  LeftParen: '(',
+  RightParen: ')',
+  LeftBrace: '{',
+  RightBrace: '}',
+  Let: 'let',
+  Print: 'print',
 } as const;
 
 export type TokenType = keyof typeof TokenType;
@@ -56,6 +66,39 @@ export class Lexer {
       return { type: 'Assignment', value: '=', line: this.line, column: this.column++ };
     }
 
+    if (char === '+') {
+      this.advance();
+      return { type: 'Plus', value: '+', line: this.line, column: this.column++ };
+    }
+    if (char === '-') {
+      this.advance();
+      return { type: 'Minus', value: '-', line: this.line, column: this.column++ };
+    }
+    if (char === '*') {
+      this.advance();
+      return { type: 'Multiply', value: '*', line: this.line, column: this.column++ };
+    }
+    if (char === '/') {
+      this.advance();
+      return { type: 'Divide', value: '/', line: this.line, column: this.column++ };
+    }
+    if (char === '(') {
+      this.advance();
+      return { type: 'LeftParen', value: '(', line: this.line, column: this.column++ };
+    }
+    if (char === ')') {
+      this.advance();
+      return { type: 'RightParen', value: ')', line: this.line, column: this.column++ };
+    }
+    if (char === '{') {
+      this.advance();
+      return { type: 'LeftBrace', value: '{', line: this.line, column: this.column++ };
+    }
+    if (char === '}') {
+      this.advance();
+      return { type: 'RightBrace', value: '}', line: this.line, column: this.column++ };
+    }
+
     if (char === ';') {
       this.advance();
       return { type: 'Semicolon', value: ';', line: this.line, column: this.column++ };
@@ -76,6 +119,12 @@ export class Lexer {
     const value = this.input.slice(start, this.position);
     if (value === 'first') {
       return { type: 'First', value: 'first', line: startLine, column: startCol };
+    }
+    if (value === 'let') {
+      return { type: 'Let', value: 'let', line: startLine, column: startCol };
+    }
+    if (value === 'print') {
+      return { type: 'Print', value: 'print', line: startLine, column: startCol };
     }
     return { type: 'Identifier', value, line: startLine, column: startCol };
   }
@@ -139,6 +188,10 @@ export class Parser {
   }
 
   private parseStatement(): ast.Node {
+    if (this.currentToken.type === 'Let') return this.parseVariableDeclaration();
+    if (this.currentToken.type === 'Print') return this.parsePrintStatement();
+    if (this.currentToken.type === 'LeftBrace') return this.parseBlockStatement();
+
     const stmt = this.parseExpressionStatement();
     if (this.currentToken.type === 'Semicolon') {
       this.eat('Semicolon');
@@ -155,8 +208,83 @@ export class Parser {
     } as ast.ExpressionStatementNode;
   }
 
+  private getPrecedence(opType: string): number {
+    switch (opType) {
+      case 'Plus':
+      case 'Minus': return 1;
+      case 'Multiply':
+      case 'Divide': return 2;
+      default: return 0;
+    }
+  }
+
+  private parseBinaryExpression(precedence: number): ast.Node {
+    let left = this.parseAssignmentExpression();
+
+    while (true) {
+      const token = this.currentToken;
+      const newPrecedence = this.getPrecedence(token.type);
+      if (newPrecedence <= precedence) break;
+
+      this.eat(token.type as TokenType);
+      const right = this.parseBinaryExpression(newPrecedence);
+      left = {
+        type: 'BinaryExpression',
+        operator: token.value as string,
+        left,
+        right,
+        accept: ast.BinaryExpressionNode.prototype.accept
+      } as ast.BinaryExpressionNode;
+    }
+    return left;
+  }
+
+  private parseVariableDeclaration(): ast.VariableDeclarationNode {
+    this.eat('Let');
+    const identifier = this.parseIdentifier();
+    let initializer: ast.Node | null = null;
+
+    if (this.currentToken.type === 'Assignment') {
+      this.eat('Assignment');
+      initializer = this.parseExpression();
+    }
+
+    return {
+      type: 'VariableDeclaration',
+      identifier,
+      initializer,
+      accept: ast.VariableDeclarationNode.prototype.accept
+    };
+  }
+
+  private parsePrintStatement(): ast.PrintStatementNode {
+    this.eat('Print');
+    const expression = this.parseExpression();
+    return {
+      type: 'PrintStatement',
+      expression,
+      accept: ast.PrintStatementNode.prototype.accept
+    };
+  }
+
+  private parseBlockStatement(): ast.BlockStatementNode {
+    this.eat('LeftBrace');
+    const body: ast.Node[] = [];
+
+    while (this.currentToken.type !== 'RightBrace' && this.currentToken.type !== 'EOF') {
+      body.push(this.parseStatement());
+    }
+
+    this.eat('RightBrace');
+    return {
+      type: 'BlockStatement',
+      body,
+      accept: ast.BlockStatementNode.prototype.accept
+    };
+  }
+
   private parseExpression(): ast.Node {
-    return this.parseAssignmentExpression();
+    return this.parseBinaryExpression(0);
   }
 
   private parseAssignmentExpression(): ast.Node {
@@ -188,6 +316,12 @@ export class Parser {
         return this.parseNumericLiteral();
       case 'First':
         return this.parseFirstExpression();
+      case 'LeftParen': {
+        this.eat('LeftParen');
+        const expr = this.parseExpression();
+        this.eat('RightParen');
+        return expr;
+      }
       default:
         throw new Error(`Unexpected primary expression: ${this.currentToken.type}`);
     }

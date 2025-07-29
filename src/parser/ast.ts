@@ -5,6 +5,10 @@ export interface Visitor {
   AssignmentExpression(node: AssignmentExpressionNode): void;
   ExpressionStatement(node: ExpressionStatementNode): void;
   FirstExpression(node: FirstExpressionNode): void;
+  BinaryExpression(node: BinaryExpressionNode): void;
+  VariableDeclaration(node: VariableDeclarationNode): void;
+  PrintStatement(node: PrintStatementNode): void;
+  BlockStatement(node: BlockStatementNode): void;
 }
 
 // Add accept() methods to all node interfaces
@@ -14,7 +18,8 @@ export interface NodeBase {
 }
 
 export type Node = ProgramNode | IdentifierNode | NumericLiteralNode
-    | AssignmentExpressionNode | ExpressionStatementNode | FirstExpressionNode;
+    | AssignmentExpressionNode | ExpressionStatementNode | FirstExpressionNode
+    | BinaryExpressionNode | VariableDeclarationNode | PrintStatementNode | BlockStatementNode;
 
 export interface ProgramNode extends NodeBase {
   type: 'Program';
@@ -47,6 +52,29 @@ export interface FirstExpressionNode extends NodeBase {
   argument: Node;
 }
 
+export interface BinaryExpressionNode extends NodeBase {
+  type: 'BinaryExpression';
+  operator: string;
+  left: Node;
+  right: Node;
+}
+
+export interface VariableDeclarationNode extends NodeBase {
+  type: 'VariableDeclaration';
+  identifier: IdentifierNode;
+  initializer: Node | null;
+}
+
+export interface PrintStatementNode extends NodeBase {
+  type: 'PrintStatement';
+  expression: Node;
+}
+
+export interface BlockStatementNode extends NodeBase {
+  type: 'BlockStatement';
+  body: Node[];
+}
+
 (ProgramNode.prototype as any).accept = function(visitor: Visitor) {
   visitor.Program(this);
   this.body.forEach((child: Node) => child.accept(visitor));
@@ -74,4 +102,20 @@ export interface FirstExpressionNode extends NodeBase {
 (FirstExpressionNode.prototype as any).accept = 
     function(visitor: Visitor) {
   visitor.FirstExpression(this);
+};
+
+(BinaryExpressionNode.prototype as any).accept = function(visitor: Visitor) {
+  visitor.BinaryExpression(this);
+};
+
+(VariableDeclarationNode.prototype as any).accept = function(visitor: Visitor) {
+  visitor.VariableDeclaration(this);
+};
+
+(PrintStatementNode.prototype as any).accept = function(visitor: Visitor) {
+  visitor.PrintStatement(this);
+};
+
+(BlockStatementNode.prototype as any).accept = function(visitor: Visitor) {
+  visitor.BlockStatement(this);
 };

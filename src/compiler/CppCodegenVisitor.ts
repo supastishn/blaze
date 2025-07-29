@@ -19,31 +19,45 @@ export class CppCodegenVisitor implements ast.Visitor {
     this.emit('');
     this.emit('int main() {');
     this.indentLevel++;
-    
-    node.body.forEach(stmt => {
-      this.declaredVars.clear(); // Reset per statement
-      stmt.accept(this);
-    });
-    
+
+    this.declaredVars.clear(); // Initialize only once
+    node.body.forEach(stmt => stmt.accept(this));
+
     this.emit('return 0;');
     this.indentLevel--;
     this.emit('}');
   }
 
-  Identifier(node: ast.IdentifierNode) {
-    if (!this.declaredVars.has(node.name)) {
-      this.emit(`int ${node.name} = 0;`);
-      this.declaredVars.add(node.name);
+  BinaryExpression(node: ast.BinaryExpressionNode) {
+    // Handled in genExpression
+  }
+
+  VariableDeclaration(node: ast.VariableDeclarationNode) {
+    const varName = node.identifier.name;
+    if (!this.declaredVars.has(varName)) {
+      const initValue = node.initializer ?
+        this.genExpression(node.initializer) : '0';
+      this.emit(`int ${varName} = ${initValue};`);
+      this.declaredVars.add(varName);
     }
   }
 
-  NumericLiteral(node: ast.NumericLiteralNode) {
-    // Value will be used in expressions
+  PrintStatement(node: ast.PrintStatementNode) {
+    const exprValue = this.genExpression(node.expression);
+    this.emit(`std::cout << ${exprValue} << std::endl;`);
+  }
+
+  BlockStatement(node: ast.BlockStatementNode) {
+    this.emit('{');
+    this.indentLevel++;
+    node.body.forEach(stmt => stmt.accept(this));
+    this.indentLevel--;
+    this.emit('}');
   }
 
   AssignmentExpression(node: ast.AssignmentExpressionNode) {
-    node.left.accept(this);  // Ensure var is declared
-    this.emit(`${node.left.name} = ${this.genExpression(node.right)};`);
+    const varName = node.left.name;
+    this.emit(`${varName} = ${this.genExpression(node.right)};`);
   }
 
   ExpressionStatement(node: ast.ExpressionStatementNode) {
@@ -62,6 +76,10 @@ export class CppCodegenVisitor implements ast.Visitor {
         return (node as ast.IdentifierNode).name;
       case 'NumericLiteral':
         return String((node as ast.NumericLiteralNode).value);
+      case 'BinaryExpression': {
+        const binNode = node as ast.BinaryExpressionNode;
+        return `(${this.genExpression(binNode.left)} ${binNode.operator} ${this.genExpression(binNode.right)})`;
+      }
       default:
         throw new Error(`Unsupported expression type: ${node.type}`);
     }
