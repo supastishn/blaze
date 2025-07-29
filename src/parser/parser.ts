@@ -1,6 +1,5 @@
 import * as ast from './ast';
 
-// Token types
 export const TokenType = {
   EOF: 'EOF',
   Identifier: 'Identifier',
@@ -27,7 +26,6 @@ export class Lexer {
   constructor(private readonly input: string) {}
 
   nextToken(): Token {
-    // Skip whitespace
     while (/\s/.test(this.peek())) {
       if (this.peek() === '\n') {
         this.line++;
@@ -45,17 +43,14 @@ export class Lexer {
     const current = this.peek();
     const char = current?.charAt(0);
 
-    // Handle identifiers and keywords
     if (/[a-zA-Z_]/.test(char)) {
       return this.parseIdentifier();
     }
 
-    // Handle numbers
     if (/[0-9]/.test(char)) {
       return this.parseNumber();
     }
 
-    // Handle symbols
     if (char === '=') {
       this.advance();
       return { type: 'Assignment', value: '=', line: this.line, column: this.column++ };
@@ -179,7 +174,6 @@ export class Parser {
         } as ast.AssignmentExpressionNode;
       }
 
-      // If no assignment, return as simple identifier
       return identifier;
     }
     
