@@ -73,8 +73,7 @@ export interface FirstExpressionNode extends NodeBase {
   visitor.ExpressionStatement(this);
 };
 
-// Add accept method for FirstExpression
-(FirstExpressionNode.prototype as any).accept = function(visitor: Visitor) {
-  this.argument.accept(visitor);
+(FirstExpressionNode.prototype as any).accept = 
+    function(visitor: Visitor) {
   visitor.FirstExpression(this);
 };
