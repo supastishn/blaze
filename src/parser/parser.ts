@@ -21,21 +21,96 @@ export interface Token {
 
 export class Lexer {
   private position = 0;
+  private line = 1;
+  private column = 0;
   
   constructor(private readonly input: string) {}
 
   nextToken(): Token {
-    // TODO: Implement tokenization
-    // Example: recognize 'first' keyword
-    // This is a stub implementation, you should replace with real logic
-    // For demonstration, let's just recognize 'first' at the start
-    const trimmed = this.input.slice(this.position).trim();
-    if (trimmed.startsWith('first')) {
-      this.position += 5;
-      return { type: 'First', value: 'first', line: 0, column: this.position - 5 };
+    // Skip whitespace
+    while (/\s/.test(this.peek())) {
+      if (this.peek() === '\n') {
+        this.line++;
+        this.column = 0;
+      } else {
+        this.column++;
+      }
+      this.position++;
     }
-    // Fallback to EOF
-    return { type: 'EOF', value: '', line: 0, column: 0 };
+
+    if (this.position >= this.input.length) {
+      return { type: 'EOF', value: '', line: this.line, column: this.column };
+    }
+
+    const current = this.peek();
+    const char = current?.charAt(0);
+
+    // Handle identifiers and keywords
+    if (/[a-zA-Z_]/.test(char)) {
+      return this.parseIdentifier();
+    }
+
+    // Handle numbers
+    if (/[0-9]/.test(char)) {
+      return this.parseNumber();
+    }
+
+    // Handle symbols
+    if (char === '=') {
+      this.advance();
+      return { type: 'Assignment', value: '=', line: this.line, column: this.column++ };
+    }
+
+    if (char === ';') {
+      this.advance();
+      return { type: 'Semicolon', value: ';', line: this.line, column: this.column++ };
+    }
+
+    throw new Error(`Unexpected character: '${char}' at line ${this.line}, column ${this.column}`);
+  }
+
+  private parseIdentifier(): Token {
+    const start = this.position;
+    const startLine = this.line;
+    const startCol = this.column;
+    
+    while (/[a-zA-Z0-9_]/.test(this.peek())) {
+      this.advance();
+    }
+    
+    const value = this.input.slice(start, this.position);
+    if (value === 'first') {
+      return { type: 'First', value: 'first', line: startLine, column: startCol };
+    }
+    return { type: 'Identifier', value, line: startLine, column: startCol };
+  }
+
+  private parseNumber(): Token {
+    const start = this.position;
+    const startLine = this.line;
+    const startCol = this.column;
+    
+    while (/[0-9]/.test(this.peek())) {
+      this.advance();
+    }
+    
+    const value = this.input.slice(start, this.position);
+    return { 
+      type: 'NumericLiteral', 
+      value: parseInt(value, 10), 
+      line: startLine, 
+      column: startCol 
+    };
+  }
+
+  private peek(): string {
+    if (this.position >= this.input.length) return '';
+    return this.input.charAt(this.position);
+  }
+
+  private advance(): void {
+    this.position++;
+    this.column++;
   }
 }
 
@@ -50,24 +125,39 @@ export class Parser {
     if (this.currentToken.type === tokenType) {
       this.currentToken = this.lexer.nextToken();
     } else {
-      throw new Error(`Unexpected token: ${this.currentToken.type}`);
+      throw new Error(`Unexpected token: ${this.currentToken.type}, expected ${tokenType}`);
     }
   }
 
   parseProgram(): ast.ProgramNode {
-    const program = { type: 'Program', body: [] } as ast.ProgramNode;
-    // TODO: Parse statements
-    return program;
+    const body: ast.Node[] = [];
+    
+    while (this.currentToken.type !== 'EOF') {
+      body.push(this.parseStatement());
+    }
+    
+    return { 
+      type: 'Program', 
+      body, 
+      accept: ast.ProgramNode.prototype.accept 
+    } as ast.ProgramNode;
   }
 
   private parseStatement(): ast.Node {
-    return this.parseExpressionStatement();
+    const stmt = this.parseExpressionStatement();
+    if (this.currentToken.type === 'Semicolon') {
+      this.eat('Semicolon');
+    }
+    return stmt;
   }
 
   private parseExpressionStatement(): ast.ExpressionStatementNode {
     const expression = this.parseExpression();
-    this.eat('Semicolon');
-    return { type: 'ExpressionStatement', expression } as ast.ExpressionStatementNode;
+    return { 
+      type: 'ExpressionStatement', 
+      expression, 
+      accept: ast.ExpressionStatementNode.prototype.accept 
+    } as ast.ExpressionStatementNode;
   }
 
   private parseExpression(): ast.Node {
@@ -75,13 +165,25 @@ export class Parser {
   }
 
   private parseAssignmentExpression(): ast.Node {
-    const left = this.parsePrimaryExpression();
-    if (this.currentToken.type === 'Assignment') {
-      this.eat('Assignment');
-      const right = this.parseExpression();
-      return { type: 'AssignmentExpression', left, right } as ast.AssignmentExpressionNode;
+    if (this.currentToken.type === 'Identifier') {
+      const identifier = this.parseIdentifier();
+      
+      if (this.currentToken.type === 'Assignment') {
+        this.eat('Assignment');
+        const right = this.parseExpression();
+        return { 
+          type: 'AssignmentExpression',
+          left: identifier,
+          right,
+          accept: ast.AssignmentExpressionNode.prototype.accept
+        } as ast.AssignmentExpressionNode;
+      }
+
+      // If no assignment, return as simple identifier
+      return identifier;
     }
-    return left;
+    
+    return this.parsePrimaryExpression();
   }
 
   private parsePrimaryExpression(): ast.Node {
@@ -93,7 +195,7 @@ export class Parser {
       case 'First':
         return this.parseFirstExpression();
       default:
-        throw new Error('Unexpected primary expression');
+        throw new Error(`Unexpected primary expression: ${this.currentToken.type}`);
     }
   }
 
@@ -103,19 +205,27 @@ export class Parser {
     return {
       type: 'FirstExpression',
       argument,
-      accept: (ast.FirstExpressionNode.prototype as any).accept
-    };
+      accept: ast.FirstExpressionNode.prototype.accept
+    } as ast.FirstExpressionNode;
   }
 
   private parseIdentifier(): ast.IdentifierNode {
     const token = this.currentToken;
     this.eat('Identifier');
-    return { type: 'Identifier', name: token.value as string } as ast.IdentifierNode;
+    return { 
+      type: 'Identifier', 
+      name: token.value as string, 
+      accept: ast.IdentifierNode.prototype.accept 
+    } as ast.IdentifierNode;
   }
 
   private parseNumericLiteral(): ast.NumericLiteralNode {
     const token = this.currentToken;
     this.eat('NumericLiteral');
-    return { type: 'NumericLiteral', value: token.value as number } as ast.NumericLiteralNode;
+    return { 
+      type: 'NumericLiteral', 
+      value: token.value as number, 
+      accept: ast.NumericLiteralNode.prototype.accept 
+    } as ast.NumericLiteralNode;
   }
 }
