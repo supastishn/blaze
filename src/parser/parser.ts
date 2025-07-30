@@ -304,8 +304,9 @@ export class Parser {
   private parseAssignmentExpression(): ast.Node {
     if (this.currentToken.type === 'Identifier') {
       const identifier = this.parseIdentifier();
-      
-      if (this.currentToken.type === 'Assignment') {
+      const nextToken = this.currentToken; // Capture token type to avoid narrowing issues
+
+      if (nextToken.type === 'Assignment') {
         this.eat('Assignment');
         const right = this.parseExpression();
         return { 
