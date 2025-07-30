@@ -28,6 +28,14 @@ export class CppCodegenVisitor implements ast.Visitor {
     this.emit('}');
   }
 
+  Identifier(node: ast.IdentifierNode) {
+    // Implemented in expression handling
+  }
+
+  NumericLiteral(node: ast.NumericLiteralNode) {
+    // Implemented in expression handling
+  }
+
   BinaryExpression(node: ast.BinaryExpressionNode) {
     // Handled in genExpression
   }

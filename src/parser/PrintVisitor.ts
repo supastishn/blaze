@@ -32,10 +32,42 @@ export class PrintVisitor implements ast.Visitor {
     node.expression.accept(this);
     this.depth--;
   }
+
   FirstExpression(node: ast.FirstExpressionNode) {
     console.log(`${'  '.repeat(this.depth)}FirstExpression:`);
     this.depth++;
     node.argument.accept(this);
+    this.depth--;
+  }
+
+  BinaryExpression(node: ast.BinaryExpressionNode) {
+    console.log(`${'  '.repeat(this.depth)}BinaryExpression: ${node.operator}`);
+    this.depth++;
+    node.left.accept(this);
+    node.right.accept(this);
+    this.depth--;
+  }
+
+  VariableDeclaration(node: ast.VariableDeclarationNode) {
+    console.log(`${'  '.repeat(this.depth)}VariableDeclaration: ${node.identifier.name}`);
+    if (node.initializer) {
+      this.depth++;
+      node.initializer.accept(this);
+      this.depth--;
+    }
+  }
+
+  PrintStatement(node: ast.PrintStatementNode) {
+    console.log(`${'  '.repeat(this.depth)}PrintStatement:`);
+    this.depth++;
+    node.expression.accept(this);
+    this.depth--;
+  }
+
+  BlockStatement(node: ast.BlockStatementNode) {
+    console.log(`${'  '.repeat(this.depth)}BlockStatement [${node.body.length} statements]`);
+    this.depth++;
+    node.body.forEach(stmt => stmt.accept(this));
     this.depth--;
   }
 }
