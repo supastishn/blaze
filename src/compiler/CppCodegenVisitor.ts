@@ -69,7 +69,13 @@ export class CppCodegenVisitor implements ast.Visitor {
   }
 
   ExpressionStatement(node: ast.ExpressionStatementNode) {
-    node.expression.accept(this);
+    if (node.expression.type === 'AssignmentExpression') {
+      node.expression.accept(this);
+    } else {
+      // Generate and emit simple expressions with semicolon
+      const code = this.genExpression(node.expression);
+      this.emit(`${code};`);
+    }
   }
 
   FirstExpression(node: ast.FirstExpressionNode) {

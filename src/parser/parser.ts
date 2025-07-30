@@ -191,14 +191,22 @@ export class Parser {
   }
 
   private parseStatement(): ast.Node {
-    if (this.currentToken.type === 'Let') return this.parseVariableDeclaration();
-    if (this.currentToken.type === 'Print') return this.parsePrintStatement();
-    if (this.currentToken.type === 'LeftBrace') return this.parseBlockStatement();
+    let stmt: ast.Node;
+    if (this.currentToken.type === 'Let') {
+      stmt = this.parseVariableDeclaration();
+    } else if (this.currentToken.type === 'Print') {
+      stmt = this.parsePrintStatement();
+    } else if (this.currentToken.type === 'LeftBrace') {
+      stmt = this.parseBlockStatement();
+    } else {
+      stmt = this.parseExpressionStatement();
+    }
 
-    const stmt = this.parseExpressionStatement();
-    if (this.currentToken.type === 'Semicolon') {
+    // Handle semicolon for all non-block statements
+    if (stmt.type !== 'BlockStatement' && this.currentToken.type === 'Semicolon') {
       this.eat('Semicolon');
     }
+    
     return stmt;
   }
 
