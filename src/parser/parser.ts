@@ -183,7 +183,10 @@ export class Parser {
     return { 
       type: 'Program', 
       body, 
-      accept: ast.ProgramNode.prototype.accept 
+      accept(visitor: ast.Visitor) {
+        visitor.Program(this);
+        this.body.forEach(child => child.accept(visitor));
+      }
     } as ast.ProgramNode;
   }
 
@@ -204,7 +207,10 @@ export class Parser {
     return { 
       type: 'ExpressionStatement', 
       expression, 
-      accept: ast.ExpressionStatementNode.prototype.accept 
+      accept(visitor: ast.Visitor) {
+        this.expression.accept(visitor);
+        visitor.ExpressionStatement(this);
+      }
     } as ast.ExpressionStatementNode;
   }
 
@@ -233,7 +239,9 @@ export class Parser {
         operator: token.value as string,
         left,
         right,
-        accept: ast.BinaryExpressionNode.prototype.accept
+        accept(visitor: ast.Visitor) {
+          visitor.BinaryExpression(this);
+        }
       } as ast.BinaryExpressionNode;
     }
     return left;
@@ -253,8 +261,10 @@ export class Parser {
       type: 'VariableDeclaration',
       identifier,
       initializer,
-      accept: ast.VariableDeclarationNode.prototype.accept
-    };
+      accept(visitor: ast.Visitor) {
+        visitor.VariableDeclaration(this);
+      }
+    } as ast.VariableDeclarationNode;
   }
 
   private parsePrintStatement(): ast.PrintStatementNode {
@@ -263,8 +273,10 @@ export class Parser {
     return {
       type: 'PrintStatement',
       expression,
-      accept: ast.PrintStatementNode.prototype.accept
-    };
+      accept(visitor: ast.Visitor) {
+        visitor.PrintStatement(this);
+      }
+    } as ast.PrintStatementNode;
   }
 
   private parseBlockStatement(): ast.BlockStatementNode {
@@ -279,8 +291,10 @@ export class Parser {
     return {
       type: 'BlockStatement',
       body,
-      accept: ast.BlockStatementNode.prototype.accept
-    };
+      accept(visitor: ast.Visitor) {
+        visitor.BlockStatement(this);
+      }
+    } as ast.BlockStatementNode;
   }
 
   private parseExpression(): ast.Node {
@@ -298,7 +312,11 @@ export class Parser {
           type: 'AssignmentExpression',
           left: identifier,
           right,
-          accept: ast.AssignmentExpressionNode.prototype.accept
+          accept(visitor: ast.Visitor) {
+            this.left.accept(visitor);
+            this.right.accept(visitor);
+            visitor.AssignmentExpression(this);
+          }
         } as ast.AssignmentExpressionNode;
       }
 
@@ -333,7 +351,9 @@ export class Parser {
     return {
       type: 'FirstExpression',
       argument,
-      accept: ast.FirstExpressionNode.prototype.accept
+      accept(visitor: ast.Visitor) {
+        visitor.FirstExpression(this);
+      }
     } as ast.FirstExpressionNode;
   }
 
@@ -343,7 +363,9 @@ export class Parser {
     return { 
       type: 'Identifier', 
       name: token.value as string, 
-      accept: ast.IdentifierNode.prototype.accept 
+      accept(visitor: ast.Visitor) {
+        visitor.Identifier(this);
+      }
     } as ast.IdentifierNode;
   }
 
@@ -353,7 +375,9 @@ export class Parser {
     return { 
       type: 'NumericLiteral', 
       value: token.value as number, 
-      accept: ast.NumericLiteralNode.prototype.accept 
+      accept(visitor: ast.Visitor) {
+        visitor.NumericLiteral(this);
+      }
     } as ast.NumericLiteralNode;
   }
 }
