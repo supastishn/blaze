@@ -373,7 +373,7 @@ export class Parser {
     
     if (this.currentToken.type === 'Else') {
       this.eat('Else');
-      const tokenType = this.currentToken.type;
+      const tokenType = this.currentToken.type as string;
       if (tokenType === 'If') {
         alternate = this.parseIfStatement();
       } else {
