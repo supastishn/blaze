@@ -17,6 +17,15 @@ export const TokenType = {
   RightBrace: '}',
   Let: 'let',
   Print: 'print',
+  If: 'if',
+  Else: 'else',
+  While: 'while',
+  DoubleEquals: '==',
+  NotEquals: '!=',
+  LessThan: '<',
+  GreaterThan: '>',
+  LessThanOrEquals: '<=',
+  GreaterThanOrEquals: '>=',
 } as const;
 
 export type TokenType = keyof typeof TokenType;
@@ -61,47 +70,75 @@ export class Lexer {
       return this.parseNumber();
     }
 
+    const startCol = this.column;
     if (char === '=') {
       this.advance();
-      return { type: 'Assignment', value: '=', line: this.line, column: this.column++ };
+      if (this.peek() === '=') {
+        this.advance();
+        return { type: 'DoubleEquals', value: '==', line: this.line, column: startCol };
+      }
+      return { type: 'Assignment', value: '=', line: this.line, column: startCol };
     }
-
+    if (char === '!') {
+        this.advance();
+        if (this.peek() === '=') {
+            this.advance();
+            return { type: 'NotEquals', value: '!=', line: this.line, column: startCol };
+        }
+        throw new Error(`Unexpected character: '!' at line ${this.line}, column ${startCol}`);
+    }
+    if (char === '<') {
+        this.advance();
+        if (this.peek() === '=') {
+            this.advance();
+            return { type: 'LessThanOrEquals', value: '<=', line: this.line, column: startCol };
+        }
+        return { type: 'LessThan', value: '<', line: this.line, column: startCol };
+    }
+    if (char === '>') {
+        this.advance();
+        if (this.peek() === '=') {
+            this.advance();
+            return { type: 'GreaterThanOrEquals', value: '>=', line: this.line, column: startCol };
+        }
+        return { type: 'GreaterThan', value: '>', line: this.line, column: startCol };
+    }
     if (char === '+') {
       this.advance();
-      return { type: 'Plus', value: '+', line: this.line, column: this.column++ };
+      return { type: 'Plus', value: '+', line: this.line, column: startCol };
     }
     if (char === '-') {
       this.advance();
-      return { type: 'Minus', value: '-', line: this.line, column: this.column++ };
+      return { type: 'Minus', value: '-', line: this.line, column: startCol };
     }
     if (char === '*') {
       this.advance();
-      return { type: 'Multiply', value: '*', line: this.line, column: this.column++ };
+      return { type: 'Multiply', value: '*', line: this.line, column: startCol };
     }
     if (char === '/') {
       this.advance();
-      return { type: 'Divide', value: '/', line: this.line, column: this.column++ };
+      return { type: 'Divide', value: '/', line: this.line, column: startCol };
     }
     if (char === '(') {
       this.advance();
-      return { type: 'LeftParen', value: '(', line: this.line, column: this.column++ };
+      return { type: 'LeftParen', value: '(', line: this.line, column: startCol };
     }
     if (char === ')') {
       this.advance();
-      return { type: 'RightParen', value: ')', line: this.line, column: this.column++ };
+      return { type: 'RightParen', value: ')', line: this.line, column: startCol };
     }
     if (char === '{') {
       this.advance();
-      return { type: 'LeftBrace', value: '{', line: this.line, column: this.column++ };
+      return { type: 'LeftBrace', value: '{', line: this.line, column: startCol };
     }
     if (char === '}') {
       this.advance();
-      return { type: 'RightBrace', value: '}', line: this.line, column: this.column++ };
+      return { type: 'RightBrace', value: '}', line: this.line, column: startCol };
     }
 
     if (char === ';') {
       this.advance();
-      return { type: 'Semicolon', value: ';', line: this.line, column: this.column++ };
+      return { type: 'Semicolon', value: ';', line: this.line, column: startCol };
     }
 
     throw new Error(`Unexpected character: '${char}' at line ${this.line}, column ${this.column}`);
@@ -122,6 +159,15 @@ export class Lexer {
     }
     if (value === 'let') {
       return { type: 'Let', value: 'let', line: startLine, column: startCol };
+    }
+    if (value === 'if') {
+      return { type: 'If', value: 'if', line: startLine, column: startCol };
+    }
+    if (value === 'else') {
+      return { type: 'Else', value: 'else', line: startLine, column: startCol };
+    }
+    if (value === 'while') {
+      return { type: 'While', value: 'while', line: startLine, column: startCol };
     }
     if (value === 'print') {
       return { type: 'Print', value: 'print', line: startLine, column: startCol };
@@ -198,12 +244,16 @@ export class Parser {
       stmt = this.parsePrintStatement();
     } else if (this.currentToken.type === 'LeftBrace') {
       stmt = this.parseBlockStatement();
+    } else if (this.currentToken.type === 'If') {
+      stmt = this.parseIfStatement();
+    } else if (this.currentToken.type === 'While') {
+      stmt = this.parseWhileStatement();
     } else {
       stmt = this.parseExpressionStatement();
     }
 
     // Handle semicolon for all non-block statements
-    if (stmt.type !== 'BlockStatement' && this.currentToken.type === 'Semicolon') {
+    if (stmt.type !== 'BlockStatement' && stmt.type !== 'IfStatement' && stmt.type !== 'WhileStatement' && this.currentToken.type === 'Semicolon') {
       this.eat('Semicolon');
     }
     
@@ -224,10 +274,17 @@ export class Parser {
 
   private getPrecedence(opType: string): number {
     switch (opType) {
+      case 'DoubleEquals':
+      case 'NotEquals':
+      case 'LessThan':
+      case 'GreaterThan':
+      case 'LessThanOrEquals':
+      case 'GreaterThanOrEquals':
+        return 1;
       case 'Plus':
-      case 'Minus': return 1;
+      case 'Minus': return 2;
       case 'Multiply':
-      case 'Divide': return 2;
+      case 'Divide': return 3;
       default: return 0;
     }
   }
@@ -303,6 +360,53 @@ export class Parser {
         visitor.BlockStatement(this);
       }
     } as ast.BlockStatementNode;
+  }
+
+  private parseIfStatement(): ast.IfStatementNode {
+    this.eat('If');
+    this.eat('LeftParen');
+    const test = this.parseExpression();
+    this.eat('RightParen');
+    
+    const consequent = this.parseBlockStatement();
+    let alternate: ast.IfStatementNode | ast.BlockStatementNode | null = null;
+    
+    if (this.currentToken.type === 'Else') {
+      this.eat('Else');
+      if (this.currentToken.type === 'If') {
+        alternate = this.parseIfStatement();
+      } else {
+        alternate = this.parseBlockStatement();
+      }
+    }
+    
+    return {
+      type: 'IfStatement',
+      test,
+      consequent,
+      alternate,
+      accept(visitor: ast.Visitor) {
+        visitor.IfStatement(this);
+      }
+    } as ast.IfStatementNode;
+  }
+
+  private parseWhileStatement(): ast.WhileStatementNode {
+    this.eat('While');
+    this.eat('LeftParen');
+    const test = this.parseExpression();
+    this.eat('RightParen');
+    
+    const body = this.parseBlockStatement();
+    
+    return {
+      type: 'WhileStatement',
+      test,
+      body,
+      accept(visitor: ast.Visitor) {
+        visitor.WhileStatement(this);
+      }
+    } as ast.WhileStatementNode;
   }
 
   private parseExpression(): ast.Node {

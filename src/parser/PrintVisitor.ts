@@ -70,4 +70,23 @@ export class PrintVisitor implements ast.Visitor {
     node.body.forEach(stmt => stmt.accept(this));
     this.depth--;
   }
+
+  IfStatement(node: ast.IfStatementNode) {
+    console.log(`${'  '.repeat(this.depth)}IfStatement:`);
+    this.depth++;
+    node.test.accept(this);
+    node.consequent.accept(this);
+    if (node.alternate) {
+      node.alternate.accept(this);
+    }
+    this.depth--;
+  }
+
+  WhileStatement(node: ast.WhileStatementNode) {
+    console.log(`${'  '.repeat(this.depth)}WhileStatement:`);
+    this.depth++;
+    node.test.accept(this);
+    node.body.accept(this);
+    this.depth--;
+  }
 }

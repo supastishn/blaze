@@ -63,6 +63,20 @@ export class CppCodegenVisitor implements ast.Visitor {
     this.emit('}');
   }
 
+  IfStatement(node: ast.IfStatementNode) {
+    this.emit(`if (${this.genExpression(node.test)})`);
+    node.consequent.accept(this);
+    if (node.alternate) {
+      this.emit('else');
+      node.alternate.accept(this);
+    }
+  }
+
+  WhileStatement(node: ast.WhileStatementNode) {
+    this.emit(`while (${this.genExpression(node.test)})`);
+    node.body.accept(this);
+  }
+
   AssignmentExpression(node: ast.AssignmentExpressionNode) {
     const varName = node.left.name;
     this.emit(`${varName} = ${this.genExpression(node.right)};`);

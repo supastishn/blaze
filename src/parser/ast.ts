@@ -9,6 +9,8 @@ export interface Visitor {
   VariableDeclaration(node: VariableDeclarationNode): void;
   PrintStatement(node: PrintStatementNode): void;
   BlockStatement(node: BlockStatementNode): void;
+  IfStatement(node: IfStatementNode): void;
+  WhileStatement(node: WhileStatementNode): void;
 }
 
 // Add accept() methods to all node interfaces
@@ -19,7 +21,8 @@ export interface NodeBase {
 
 export type Node = ProgramNode | IdentifierNode | NumericLiteralNode
     | AssignmentExpressionNode | ExpressionStatementNode | FirstExpressionNode
-    | BinaryExpressionNode | VariableDeclarationNode | PrintStatementNode | BlockStatementNode;
+    | BinaryExpressionNode | VariableDeclarationNode | PrintStatementNode | BlockStatementNode
+    | IfStatementNode | WhileStatementNode;
 
 export interface ProgramNode extends NodeBase {
   type: 'Program';
@@ -75,6 +78,19 @@ export interface BlockStatementNode extends NodeBase {
   body: Node[];
 }
 
+export interface IfStatementNode extends NodeBase {
+  type: 'IfStatement';
+  test: Node;
+  consequent: BlockStatementNode;
+  alternate: IfStatementNode | BlockStatementNode | null;
+}
+
+export interface WhileStatementNode extends NodeBase {
+  type: 'WhileStatement';
+  test: Node;
+  body: BlockStatementNode;
+}
+
 (ProgramNode.prototype as any).accept = function(visitor: Visitor) {
   visitor.Program(this);
   this.body.forEach((child: Node) => child.accept(visitor));
@@ -118,4 +134,12 @@ export interface BlockStatementNode extends NodeBase {
 
 (BlockStatementNode.prototype as any).accept = function(visitor: Visitor) {
   visitor.BlockStatement(this);
+};
+
+(IfStatementNode.prototype as any).accept = function(visitor: Visitor) {
+  visitor.IfStatement(this);
+};
+
+(WhileStatementNode.prototype as any).accept = function(visitor: Visitor) {
+  visitor.WhileStatement(this);
 };
