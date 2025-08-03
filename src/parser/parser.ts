@@ -480,9 +480,10 @@ export class Parser {
     
     this.eat('LeftParen');
     const params: ast.IdentifierNode[] = [];
-    if (this.currentToken.type !== 'RightParen') {
+    const currentTokenType = this.currentToken.type as string;
+    if (currentTokenType !== 'RightParen') {
         params.push(this.parseIdentifier());
-        while (this.currentToken.type === 'Comma') {
+        while ((this.currentToken.type as string) === 'Comma') {
             this.eat('Comma');
             params.push(this.parseIdentifier());
         }
