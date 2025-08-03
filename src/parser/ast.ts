@@ -11,6 +11,8 @@ export interface Visitor {
   BlockStatement(node: BlockStatementNode): void;
   IfStatement(node: IfStatementNode): void;
   WhileStatement(node: WhileStatementNode): void;
+  ForStatement(node: ForStatementNode): void;
+  UnaryExpression(node: UnaryExpressionNode): void;
 }
 
 // Add accept() methods to all node interfaces
@@ -22,7 +24,7 @@ export interface NodeBase {
 export type Node = ProgramNode | IdentifierNode | NumericLiteralNode
     | AssignmentExpressionNode | ExpressionStatementNode | FirstExpressionNode
     | BinaryExpressionNode | VariableDeclarationNode | PrintStatementNode | BlockStatementNode
-    | IfStatementNode | WhileStatementNode;
+    | IfStatementNode | WhileStatementNode | ForStatementNode | UnaryExpressionNode;
 
 export interface ProgramNode extends NodeBase {
   type: 'Program';
@@ -91,6 +93,20 @@ export interface WhileStatementNode extends NodeBase {
   body: BlockStatementNode;
 }
 
+export interface ForStatementNode extends NodeBase {
+  type: 'ForStatement';
+  init: Node | null;
+  test: Node | null;
+  update: Node | null;
+  body: BlockStatementNode;
+}
+
+export interface UnaryExpressionNode extends NodeBase {
+  type: 'UnaryExpression';
+  operator: string;
+  argument: Node;
+}
+
 (ProgramNode.prototype as any).accept = function(visitor: Visitor) {
   visitor.Program(this);
   this.body.forEach((child: Node) => child.accept(visitor));
@@ -142,4 +158,12 @@ export interface WhileStatementNode extends NodeBase {
 
 (WhileStatementNode.prototype as any).accept = function(visitor: Visitor) {
   visitor.WhileStatement(this);
+};
+
+(ForStatementNode.prototype as any).accept = function(visitor: Visitor) {
+  visitor.ForStatement(this);
+};
+
+(UnaryExpressionNode.prototype as any).accept = function(visitor: Visitor) {
+  visitor.UnaryExpression(this);
 };

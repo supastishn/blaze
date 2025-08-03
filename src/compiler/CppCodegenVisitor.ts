@@ -40,6 +40,10 @@ export class CppCodegenVisitor implements ast.Visitor {
     // Handled in genExpression
   }
 
+  UnaryExpression(node: ast.UnaryExpressionNode) {
+    // Handled in genExpression
+  }
+
   VariableDeclaration(node: ast.VariableDeclarationNode) {
     const varName = node.identifier.name;
     if (!this.declaredVars.has(varName)) {
@@ -77,19 +81,33 @@ export class CppCodegenVisitor implements ast.Visitor {
     node.body.accept(this);
   }
 
+  ForStatement(node: ast.ForStatementNode) {
+    let initStr = '';
+    if (node.init) {
+      if (node.init.type === 'VariableDeclaration') {
+        const varDecl = node.init as ast.VariableDeclarationNode;
+        const varName = varDecl.identifier.name;
+        const initValue = varDecl.initializer ? this.genExpression(varDecl.initializer) : '0';
+        initStr = `int ${varName} = ${initValue}`;
+      } else {
+        initStr = this.genExpression(node.init);
+      }
+    }
+
+    const testStr = node.test ? this.genExpression(node.test) : '';
+    const updateStr = node.update ? this.genExpression(node.update) : '';
+
+    this.emit(`for (${initStr}; ${testStr}; ${updateStr})`);
+    node.body.accept(this);
+  }
+
   AssignmentExpression(node: ast.AssignmentExpressionNode) {
-    const varName = node.left.name;
-    this.emit(`${varName} = ${this.genExpression(node.right)};`);
+    // Implemented in expression handling
   }
 
   ExpressionStatement(node: ast.ExpressionStatementNode) {
-    if (node.expression.type === 'AssignmentExpression') {
-      node.expression.accept(this);
-    } else {
-      // Generate and emit simple expressions with semicolon
-      const code = this.genExpression(node.expression);
-      this.emit(`${code};`);
-    }
+    const code = this.genExpression(node.expression);
+    this.emit(`${code};`);
   }
 
   FirstExpression(node: ast.FirstExpressionNode) {
@@ -104,6 +122,14 @@ export class CppCodegenVisitor implements ast.Visitor {
         return (node as ast.IdentifierNode).name;
       case 'NumericLiteral':
         return String((node as ast.NumericLiteralNode).value);
+      case 'AssignmentExpression': {
+        const assignNode = node as ast.AssignmentExpressionNode;
+        return `${assignNode.left.name} = ${this.genExpression(assignNode.right)}`;
+      }
+      case 'UnaryExpression': {
+        const unaryNode = node as ast.UnaryExpressionNode;
+        return `(${unaryNode.operator}${this.genExpression(unaryNode.argument)})`;
+      }
       case 'BinaryExpression': {
         const binNode = node as ast.BinaryExpressionNode;
         return `(${this.genExpression(binNode.left)} ${binNode.operator} ${this.genExpression(binNode.right)})`;

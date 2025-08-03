@@ -89,4 +89,21 @@ export class PrintVisitor implements ast.Visitor {
     node.body.accept(this);
     this.depth--;
   }
+
+  ForStatement(node: ast.ForStatementNode) {
+    console.log(`${'  '.repeat(this.depth)}ForStatement:`);
+    this.depth++;
+    if (node.init) node.init.accept(this);
+    if (node.test) node.test.accept(this);
+    if (node.update) node.update.accept(this);
+    node.body.accept(this);
+    this.depth--;
+  }
+
+  UnaryExpression(node: ast.UnaryExpressionNode) {
+    console.log(`${'  '.repeat(this.depth)}UnaryExpression: ${node.operator}`);
+    this.depth++;
+    node.argument.accept(this);
+    this.depth--;
+  }
 }

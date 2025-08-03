@@ -20,6 +20,7 @@ export const TokenType = {
   If: 'if',
   Else: 'else',
   While: 'while',
+  For: 'for',
   DoubleEquals: '==',
   NotEquals: '!=',
   LessThan: '<',
@@ -169,6 +170,9 @@ export class Lexer {
     if (value === 'while') {
       return { type: 'While', value: 'while', line: startLine, column: startCol };
     }
+    if (value === 'for') {
+      return { type: 'For', value: 'for', line: startLine, column: startCol };
+    }
     if (value === 'print') {
       return { type: 'Print', value: 'print', line: startLine, column: startCol };
     }
@@ -248,12 +252,14 @@ export class Parser {
       stmt = this.parseIfStatement();
     } else if (this.currentToken.type === 'While') {
       stmt = this.parseWhileStatement();
+    } else if (this.currentToken.type === 'For') {
+      stmt = this.parseForStatement();
     } else {
       stmt = this.parseExpressionStatement();
     }
 
     // Handle semicolon for all non-block statements
-    if (stmt.type !== 'BlockStatement' && stmt.type !== 'IfStatement' && stmt.type !== 'WhileStatement' && this.currentToken.type === 'Semicolon') {
+    if (stmt.type !== 'BlockStatement' && stmt.type !== 'IfStatement' && stmt.type !== 'WhileStatement' && stmt.type !== 'ForStatement' && this.currentToken.type === 'Semicolon') {
       this.eat('Semicolon');
     }
     
@@ -410,6 +416,46 @@ export class Parser {
     } as ast.WhileStatementNode;
   }
 
+  private parseForStatement(): ast.ForStatementNode {
+    this.eat('For');
+    this.eat('LeftParen');
+
+    let init: ast.Node | null = null;
+    if (this.currentToken.type !== 'Semicolon') {
+      if (this.currentToken.type === 'Let') {
+        init = this.parseVariableDeclaration();
+      } else {
+        init = this.parseExpression();
+      }
+    }
+    this.eat('Semicolon');
+
+    let test: ast.Node | null = null;
+    if (this.currentToken.type !== 'Semicolon') {
+      test = this.parseExpression();
+    }
+    this.eat('Semicolon');
+
+    let update: ast.Node | null = null;
+    if (this.currentToken.type !== 'RightParen') {
+      update = this.parseExpression();
+    }
+    this.eat('RightParen');
+
+    const body = this.parseBlockStatement();
+
+    return {
+      type: 'ForStatement',
+      init,
+      test,
+      update,
+      body,
+      accept(visitor: ast.Visitor) {
+        visitor.ForStatement(this);
+      }
+    } as ast.ForStatementNode;
+  }
+
   private parseExpression(): ast.Node {
     return this.parseBinaryExpression(0);
   }
@@ -441,6 +487,9 @@ export class Parser {
   }
 
   private parsePrimaryExpression(): ast.Node {
+    if (this.currentToken.type === 'Minus') {
+      return this.parseUnaryExpression();
+    }
     switch (this.currentToken.type) {
       case 'Identifier':
         return this.parseIdentifier();
@@ -457,6 +506,20 @@ export class Parser {
       default:
         throw new Error(`Unexpected primary expression: ${this.currentToken.type}`);
     }
+  }
+
+  private parseUnaryExpression(): ast.UnaryExpressionNode {
+    const token = this.currentToken;
+    this.eat('Minus');
+    const argument = this.parsePrimaryExpression();
+    return {
+      type: 'UnaryExpression',
+      operator: token.value as string,
+      argument,
+      accept(visitor: ast.Visitor) {
+        visitor.UnaryExpression(this);
+      }
+    } as ast.UnaryExpressionNode;
   }
 
   private parseFirstExpression(): ast.FirstExpressionNode {

@@ -47,6 +47,25 @@ describe('Parser', () => {
     expect(ast.body[0].type).toBe('WhileStatement');
   });
 
+  test('parses for statement', () => {
+    const ast = parse('for (let i = 0; i < 10; i = i + 1) { print(i); }');
+    const stmt = ast.body[0] as any;
+    expect(stmt.type).toBe('ForStatement');
+    expect(stmt.init.type).toBe('VariableDeclaration');
+    expect(stmt.test.type).toBe('BinaryExpression');
+    expect(stmt.update.type).toBe('AssignmentExpression');
+    expect(stmt.body.type).toBe('BlockStatement');
+  });
+
+  test('parses unary minus expression', () => {
+    const ast = parse('let x = -5;');
+    const stmt = ast.body[0] as any;
+    expect(stmt.type).toBe('VariableDeclaration');
+    expect(stmt.initializer.type).toBe('UnaryExpression');
+    expect(stmt.initializer.operator).toBe('-');
+    expect((stmt.initializer.argument as any).type).toBe('NumericLiteral');
+  });
+
   test('visits nodes with PrintVisitor', () => {
     const ast = parse('let x = 5');
     const printVisitor = new PrintVisitor();

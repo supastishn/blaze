@@ -41,6 +41,19 @@ describe('Compiler', () => {
     expect(cpp).toContain('i = (i + 1);');
   });
 
+  test('compiles for statement', () => {
+    const code = 'for (let i = 0; i < 5; i = i + 1) { print(i); }';
+    const cpp = compile(code);
+    expect(cpp).toContain('for (int i = 0; (i < 5); i = (i + 1))');
+    expect(cpp).toContain('std::cout << i << std::endl;');
+  });
+
+  test('compiles unary minus', () => {
+    const code = 'let x = -5;';
+    const cpp = compile(code);
+    expect(cpp).toContain('int x = (-5);');
+  });
+
   test('reports compilation errors', () => {
     const code = 'let x = ;';
     const cpp = compile(code);
