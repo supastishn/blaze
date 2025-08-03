@@ -131,4 +131,50 @@ export class PrintVisitor implements ast.Visitor {
     node.arguments.forEach(arg => arg.accept(this));
     this.depth--;
   }
+
+  BooleanLiteral(node: ast.BooleanLiteralNode) {
+    console.log(`${'  '.repeat(this.depth)}Boolean: ${node.value}`);
+  }
+
+  StringLiteral(node: ast.StringLiteralNode) {
+    console.log(`${'  '.repeat(this.depth)}String: "${node.value}"`);
+  }
+
+  LogicalExpression(node: ast.LogicalExpressionNode) {
+    console.log(`${'  '.repeat(this.depth)}LogicalExpression: ${node.operator}`);
+    this.depth++;
+    node.left.accept(this);
+    node.right.accept(this);
+    this.depth--;
+  }
+
+  ArrayExpression(node: ast.ArrayExpressionNode) {
+    console.log(`${'  '.repeat(this.depth)}ArrayExpression [${node.elements.length} elements]`);
+    this.depth++;
+    node.elements.forEach(el => el.accept(this));
+    this.depth--;
+  }
+
+  ObjectExpression(node: ast.ObjectExpressionNode) {
+    console.log(`${'  '.repeat(this.depth)}ObjectExpression [${node.properties.length} properties]`);
+    this.depth++;
+    node.properties.forEach(p => p.accept(this));
+    this.depth--;
+  }
+
+  Property(node: ast.PropertyNode) {
+    console.log(`${'  '.repeat(this.depth)}Property:`);
+    this.depth++;
+    node.key.accept(this);
+    node.value.accept(this);
+    this.depth--;
+  }
+
+  MemberExpression(node: ast.MemberExpressionNode) {
+    console.log(`${'  '.repeat(this.depth)}MemberExpression (computed: ${node.computed})`);
+    this.depth++;
+    node.object.accept(this);
+    node.property.accept(this);
+    this.depth--;
+  }
 }

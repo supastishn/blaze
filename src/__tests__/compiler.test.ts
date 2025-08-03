@@ -65,8 +65,35 @@ describe('Compiler', () => {
     const cpp = compile(code);
     expect(cpp).toContain('int add(int a, int b)');
     expect(cpp).toContain('return (a + b);');
-    expect(cpp).toContain('int result = add(3, 4);');
-    expect(cpp).toContain('std::cout << result << std::endl;');
+    expect(cpp).toContain('auto result = add(3, 4);');
+    expect(cpp).toContain('print_any(result);');
+  });
+
+  test('compiles string and boolean literals', () => {
+    const code = 'let s = "hello"; let b = true;';
+    const cpp = compile(code);
+    expect(cpp).toContain('auto s = std::string("hello");');
+    expect(cpp).toContain('auto b = true;');
+  });
+
+  test('compiles logical expressions', () => {
+    const code = 'let r = a && b;';
+    const cpp = compile(code);
+    expect(cpp).toContain('auto r = (a && b);');
+  });
+
+  test('compiles array literals and access', () => {
+    const code = 'let arr = [1, "a"]; print(arr[0]);';
+    const cpp = compile(code);
+    expect(cpp).toContain('auto arr = std::vector<std::any>{1, std::string("a")};');
+    expect(cpp).toContain('print_any(arr[0]);');
+  });
+
+  test('compiles object literals and access', () => {
+    const code = 'let obj = { "key": "value" }; print(obj.key);';
+    const cpp = compile(code);
+    expect(cpp).toContain('auto obj = std::map<std::string, std::any>{{"key", std::string("value")}};');
+    expect(cpp).toContain('print_any(std::any_cast<std::map<std::string, std::any>&>(obj)["key"]);');
   });
 
   test('reports compilation errors', () => {

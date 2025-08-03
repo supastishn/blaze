@@ -84,6 +84,58 @@ describe('Parser', () => {
     expect(stmt.expression.arguments.length).toBe(2);
   });
 
+  test('parses string literal', () => {
+    const ast = parse('"hello"');
+    const stmt = ast.body[0] as any;
+    expect(stmt.expression.type).toBe('StringLiteral');
+    expect(stmt.expression.value).toBe('hello');
+  });
+
+  test('parses boolean literals', () => {
+    let ast = parse('true;');
+    let stmt = ast.body[0] as any;
+    expect(stmt.expression.type).toBe('BooleanLiteral');
+    expect(stmt.expression.value).toBe(true);
+
+    ast = parse('false;');
+    stmt = ast.body[0] as any;
+    expect(stmt.expression.type).toBe('BooleanLiteral');
+    expect(stmt.expression.value).toBe(false);
+  });
+
+  test('parses logical expressions', () => {
+    const ast = parse('a && b || c');
+    const stmt = ast.body[0] as any;
+    expect(stmt.expression.type).toBe('LogicalExpression');
+    expect(stmt.expression.operator).toBe('||');
+  });
+
+  test('parses array expression', () => {
+    const ast = parse('[1, "two", true]');
+    const stmt = ast.body[0] as any;
+    expect(stmt.expression.type).toBe('ArrayExpression');
+    expect(stmt.expression.elements.length).toBe(3);
+  });
+
+  test('parses object expression', () => {
+    const ast = parse('{ a: 1, "b": 2 }');
+    const stmt = ast.body[0] as any;
+    expect(stmt.expression.type).toBe('ObjectExpression');
+    expect(stmt.expression.properties.length).toBe(2);
+  });
+
+  test('parses member expression', () => {
+    let ast = parse('a.b');
+    let stmt = ast.body[0] as any;
+    expect(stmt.expression.type).toBe('MemberExpression');
+    expect(stmt.expression.computed).toBe(false);
+
+    ast = parse('a[b]');
+    stmt = ast.body[0] as any;
+    expect(stmt.expression.type).toBe('MemberExpression');
+    expect(stmt.expression.computed).toBe(true);
+  });
+
   test('visits nodes with PrintVisitor', () => {
     const ast = parse('let x = 5');
     const printVisitor = new PrintVisitor();

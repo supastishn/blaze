@@ -1,9 +1,11 @@
+
 import * as ast from './ast';
 
 export const TokenType = {
   EOF: 'EOF',
   Identifier: 'Identifier',
   NumericLiteral: 'NumericLiteral',
+  StringLiteral: 'StringLiteral',
   Assignment: '=',
   Semicolon: ';',
   First: 'first',
@@ -15,10 +17,14 @@ export const TokenType = {
   RightParen: ')',
   LeftBrace: '{',
   RightBrace: '}',
+  LeftBracket: '[',
+  RightBracket: ']',
   Let: 'let',
   Print: 'print',
   If: 'if',
   Else: 'else',
+  True: 'true',
+  False: 'false',
   While: 'while',
   For: 'for',
   DoubleEquals: '==',
@@ -28,6 +34,11 @@ export const TokenType = {
   LessThanOrEquals: '<=',
   GreaterThanOrEquals: '>=',
   Comma: ',',
+  Colon: ':',
+  Dot: '.',
+  Bang: '!',
+  AmpersandAmpersand: '&&',
+  PipePipe: '||',
   Function: 'function',
   Return: 'return',
 } as const;
@@ -73,6 +84,10 @@ export class Lexer {
     if (/[0-9]/.test(char)) {
       return this.parseNumber();
     }
+    
+    if (char === '"') {
+      return this.parseString();
+    }
 
     const startCol = this.column;
     if (char === '=') {
@@ -89,7 +104,21 @@ export class Lexer {
             this.advance();
             return { type: 'NotEquals', value: '!=', line: this.line, column: startCol };
         }
-        throw new Error(`Unexpected character: '!' at line ${this.line}, column ${startCol}`);
+        return { type: 'Bang', value: '!', line: this.line, column: startCol };
+    }
+    if (char === '&') {
+      this.advance();
+      if (this.peek() === '&') {
+        this.advance();
+        return { type: 'AmpersandAmpersand', value: '&&', line: this.line, column: startCol };
+      }
+    }
+    if (char === '|') {
+      this.advance();
+      if (this.peek() === '|') {
+        this.advance();
+        return { type: 'PipePipe', value: '||', line: this.line, column: startCol };
+      }
     }
     if (char === '<') {
         this.advance();
@@ -139,6 +168,14 @@ export class Lexer {
       this.advance();
       return { type: 'RightBrace', value: '}', line: this.line, column: startCol };
     }
+    if (char === '[') {
+      this.advance();
+      return { type: 'LeftBracket', value: '[', line: this.line, column: startCol };
+    }
+    if (char === ']') {
+      this.advance();
+      return { type: 'RightBracket', value: ']', line: this.line, column: startCol };
+    }
 
     if (char === ',') {
       this.advance();
@@ -148,6 +185,14 @@ export class Lexer {
     if (char === ';') {
       this.advance();
       return { type: 'Semicolon', value: ';', line: this.line, column: startCol };
+    }
+    if (char === ':') {
+      this.advance();
+      return { type: 'Colon', value: ':', line: this.line, column: startCol };
+    }
+    if (char === '.') {
+      this.advance();
+      return { type: 'Dot', value: '.', line: this.line, column: startCol };
     }
 
     throw new Error(`Unexpected character: '${char}' at line ${this.line}, column ${this.column}`);
@@ -174,6 +219,12 @@ export class Lexer {
     }
     if (value === 'else') {
       return { type: 'Else', value: 'else', line: startLine, column: startCol };
+    }
+    if (value === 'true') {
+      return { type: 'True', value: 'true', line: startLine, column: startCol };
+    }
+    if (value === 'false') {
+      return { type: 'False', value: 'false', line: startLine, column: startCol };
     }
     if (value === 'while') {
       return { type: 'While', value: 'while', line: startLine, column: startCol };
@@ -209,6 +260,21 @@ export class Lexer {
       line: startLine, 
       column: startCol 
     };
+  }
+
+  private parseString(): Token {
+    const startCol = this.column;
+    this.advance(); // consume opening "
+    const start = this.position;
+    while (this.peek() !== '"' && this.position < this.input.length) {
+      this.advance();
+    }
+    if (this.peek() !== '"') {
+      throw new Error(`Unterminated string at line ${this.line}, column ${startCol}`);
+    }
+    const value = this.input.slice(start, this.position);
+    this.advance(); // consume closing "
+    return { type: 'StringLiteral', value, line: this.line, column: startCol };
   }
 
   private peek(): string {
@@ -298,40 +364,58 @@ export class Parser {
 
   private getPrecedence(opType: string): number {
     switch (opType) {
+      case 'PipePipe':
+        return 1;
+      case 'AmpersandAmpersand':
+        return 2;
       case 'DoubleEquals':
       case 'NotEquals':
       case 'LessThan':
       case 'GreaterThan':
       case 'LessThanOrEquals':
       case 'GreaterThanOrEquals':
-        return 1;
+        return 3;
       case 'Plus':
-      case 'Minus': return 2;
+      case 'Minus': return 4;
       case 'Multiply':
-      case 'Divide': return 3;
+      case 'Divide': return 5;
       default: return 0;
     }
   }
 
   private parseBinaryExpression(precedence: number): ast.Node {
-    let left = this.parseAssignmentExpression();
+    let left = this.parseCallMemberExpression();
 
     while (true) {
       const token = this.currentToken;
-      const newPrecedence = this.getPrecedence(token.type);
-      if (newPrecedence <= precedence) break;
-
-      this.eat(token.type as TokenType);
+      const opType = token.type as string;
+      const newPrecedence = this.getPrecedence(opType);
+      if (newPrecedence === 0 || newPrecedence <= precedence) break;
+      
+      this.eat(opType as TokenType);
       const right = this.parseBinaryExpression(newPrecedence);
-      left = {
-        type: 'BinaryExpression',
-        operator: token.value as string,
-        left,
-        right,
-        accept(visitor: ast.Visitor) {
-          visitor.BinaryExpression(this);
-        }
-      } as ast.BinaryExpressionNode;
+      
+      if (opType === 'AmpersandAmpersand' || opType === 'PipePipe') {
+        left = {
+          type: 'LogicalExpression',
+          operator: token.value as string,
+          left,
+          right,
+          accept(visitor: ast.Visitor) {
+            visitor.LogicalExpression(this);
+          }
+        } as ast.LogicalExpressionNode;
+      } else {
+        left = {
+          type: 'BinaryExpression',
+          operator: token.value as string,
+          left,
+          right,
+          accept(visitor: ast.Visitor) {
+            visitor.BinaryExpression(this);
+          }
+        } as ast.BinaryExpressionNode;
+      }
     }
     return left;
   }
@@ -520,42 +604,21 @@ export class Parser {
   }
 
   private parseExpression(): ast.Node {
-    return this.parseBinaryExpression(0);
+    return this.parseAssignmentExpression();
   }
 
   private parseAssignmentExpression(): ast.Node {
-    let expr = this.parsePrimaryExpression();
-
-    while (this.currentToken.type === 'LeftParen') {
-      this.eat('LeftParen');
-      const args: ast.Node[] = [];
-      if (this.currentToken.type !== 'RightParen') {
-        args.push(this.parseExpression());
-        while (this.currentToken.type === 'Comma') {
-          this.eat('Comma');
-          args.push(this.parseExpression());
-        }
-      }
-      this.eat('RightParen');
-      expr = {
-        type: 'CallExpression',
-        callee: expr,
-        arguments: args,
-        accept(visitor: ast.Visitor) {
-            visitor.CallExpression(this);
-        }
-      } as ast.CallExpressionNode;
-    }
+    const left = this.parseBinaryExpression(0);
 
     if (this.currentToken.type === 'Assignment') {
-      if (expr.type !== 'Identifier') {
+      if (left.type !== 'Identifier' && left.type !== 'MemberExpression') {
         throw new Error('Invalid left-hand side in assignment expression.');
       }
       this.eat('Assignment');
-      const right = this.parseExpression();
+      const right = this.parseAssignmentExpression(); // Right-associative
       return { 
         type: 'AssignmentExpression',
-        left: expr,
+        left: left as ast.IdentifierNode, // Simplified, validation done above
         right,
         accept(visitor: ast.Visitor) {
           this.left.accept(visitor);
@@ -565,18 +628,77 @@ export class Parser {
       } as ast.AssignmentExpressionNode;
     }
     
+    return left;
+  }
+
+  private parseCallMemberExpression(): ast.Node {
+    let expr = this.parsePrimaryExpression();
+
+    while (true) {
+      const tokenType = this.currentToken.type as string;
+      if (tokenType === 'LeftParen') {
+        this.eat('LeftParen');
+        const args: ast.Node[] = [];
+        if (this.currentToken.type !== 'RightParen') {
+          args.push(this.parseExpression());
+          while (this.currentToken.type === 'Comma') {
+            this.eat('Comma');
+            args.push(this.parseExpression());
+          }
+        }
+        this.eat('RightParen');
+        expr = {
+          type: 'CallExpression',
+          callee: expr,
+          arguments: args,
+          accept(visitor: ast.Visitor) {
+              visitor.CallExpression(this);
+          }
+        } as ast.CallExpressionNode;
+      } else if (tokenType === 'LeftBracket') {
+        this.eat('LeftBracket');
+        const property = this.parseExpression();
+        this.eat('RightBracket');
+        expr = {
+          type: 'MemberExpression',
+          object: expr,
+          property,
+          computed: true,
+          accept(visitor: ast.Visitor) { visitor.MemberExpression(this); }
+        } as ast.MemberExpressionNode;
+      } else if (tokenType === 'Dot') {
+        this.eat('Dot');
+        const property = this.parseIdentifier();
+        expr = {
+          type: 'MemberExpression',
+          object: expr,
+          property,
+          computed: false,
+          accept(visitor: ast.Visitor) { visitor.MemberExpression(this); }
+        } as ast.MemberExpressionNode;
+      } else {
+        break;
+      }
+    }
     return expr;
   }
 
   private parsePrimaryExpression(): ast.Node {
-    if (this.currentToken.type === 'Minus') {
+    const tokenType = this.currentToken.type as string;
+    if (tokenType === 'Minus' || tokenType === 'Bang') {
       return this.parseUnaryExpression();
     }
-    switch (this.currentToken.type) {
+
+    switch (tokenType) {
       case 'Identifier':
         return this.parseIdentifier();
       case 'NumericLiteral':
         return this.parseNumericLiteral();
+      case 'StringLiteral':
+        return this.parseStringLiteral();
+      case 'True':
+      case 'False':
+        return this.parseBooleanLiteral();
       case 'First':
         return this.parseFirstExpression();
       case 'LeftParen': {
@@ -585,6 +707,10 @@ export class Parser {
         this.eat('RightParen');
         return expr;
       }
+      case 'LeftBracket':
+        return this.parseArrayExpression();
+      case 'LeftBrace':
+        return this.parseObjectExpression();
       default:
         throw new Error(`Unexpected primary expression: ${this.currentToken.type}`);
     }
@@ -592,7 +718,7 @@ export class Parser {
 
   private parseUnaryExpression(): ast.UnaryExpressionNode {
     const token = this.currentToken;
-    this.eat('Minus');
+    this.eat(token.type as TokenType); // Eat Minus or Bang
     const argument = this.parsePrimaryExpression();
     return {
       type: 'UnaryExpression',
@@ -638,5 +764,82 @@ export class Parser {
         visitor.NumericLiteral(this);
       }
     } as ast.NumericLiteralNode;
+  }
+
+  private parseStringLiteral(): ast.StringLiteralNode {
+    const token = this.currentToken;
+    this.eat('StringLiteral');
+    return {
+      type: 'StringLiteral',
+      value: token.value as string,
+      accept(visitor: ast.Visitor) { visitor.StringLiteral(this); }
+    } as ast.StringLiteralNode;
+  }
+
+  private parseBooleanLiteral(): ast.BooleanLiteralNode {
+    const token = this.currentToken;
+    this.eat(token.type as TokenType);
+    return {
+      type: 'BooleanLiteral',
+      value: token.type === 'True',
+      accept(visitor: ast.Visitor) { visitor.BooleanLiteral(this); }
+    } as ast.BooleanLiteralNode;
+  }
+
+  private parseArrayExpression(): ast.ArrayExpressionNode {
+    this.eat('LeftBracket');
+    const elements: ast.Node[] = [];
+    if (this.currentToken.type !== 'RightBracket') {
+      elements.push(this.parseExpression());
+      while (this.currentToken.type === 'Comma') {
+        this.eat('Comma');
+        elements.push(this.parseExpression());
+      }
+    }
+    this.eat('RightBracket');
+    return {
+      type: 'ArrayExpression',
+      elements,
+      accept(visitor: ast.Visitor) { visitor.ArrayExpression(this); }
+    } as ast.ArrayExpressionNode;
+  }
+
+  private parseObjectExpression(): ast.ObjectExpressionNode {
+    this.eat('LeftBrace');
+    const properties: ast.PropertyNode[] = [];
+    if (this.currentToken.type !== 'RightBrace') {
+      properties.push(this.parseProperty());
+      while(this.currentToken.type === 'Comma') {
+        this.eat('Comma');
+        properties.push(this.parseProperty());
+      }
+    }
+    this.eat('RightBrace');
+    return {
+      type: 'ObjectExpression',
+      properties,
+      accept(visitor: ast.Visitor) { visitor.ObjectExpression(this); }
+    } as ast.ObjectExpressionNode;
+  }
+
+  private parseProperty(): ast.PropertyNode {
+    let key: ast.IdentifierNode | ast.StringLiteralNode;
+    if (this.currentToken.type === 'Identifier') {
+      key = this.parseIdentifier();
+    } else if (this.currentToken.type === 'StringLiteral') {
+      key = this.parseStringLiteral();
+    } else {
+      throw new Error(`Invalid property key type: ${this.currentToken.type}`);
+    }
+    
+    this.eat('Colon');
+    const value = this.parseExpression();
+    
+    return {
+      type: 'Property',
+      key,
+      value,
+      accept(visitor: ast.Visitor) { visitor.Property(this); }
+    } as ast.PropertyNode;
   }
 }

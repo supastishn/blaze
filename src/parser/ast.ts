@@ -16,6 +16,13 @@ export interface Visitor {
   FunctionDeclaration(node: FunctionDeclarationNode): void;
   ReturnStatement(node: ReturnStatementNode): void;
   CallExpression(node: CallExpressionNode): void;
+  BooleanLiteral(node: BooleanLiteralNode): void;
+  StringLiteral(node: StringLiteralNode): void;
+  LogicalExpression(node: LogicalExpressionNode): void;
+  ArrayExpression(node: ArrayExpressionNode): void;
+  ObjectExpression(node: ObjectExpressionNode): void;
+  Property(node: PropertyNode): void;
+  MemberExpression(node: MemberExpressionNode): void;
 }
 
 // Add accept() methods to all node interfaces
@@ -28,7 +35,9 @@ export type Node = ProgramNode | IdentifierNode | NumericLiteralNode
     | AssignmentExpressionNode | ExpressionStatementNode | FirstExpressionNode
     | BinaryExpressionNode | VariableDeclarationNode | PrintStatementNode | BlockStatementNode
     | IfStatementNode | WhileStatementNode | ForStatementNode | UnaryExpressionNode
-    | FunctionDeclarationNode | ReturnStatementNode | CallExpressionNode;
+    | FunctionDeclarationNode | ReturnStatementNode | CallExpressionNode | BooleanLiteralNode
+    | StringLiteralNode | LogicalExpressionNode | ArrayExpressionNode | ObjectExpressionNode
+    | PropertyNode | MemberExpressionNode;
 
 export interface ProgramNode extends NodeBase {
   type: 'Program';
@@ -43,6 +52,16 @@ export interface IdentifierNode extends NodeBase {
 export interface NumericLiteralNode extends NodeBase {
   type: 'NumericLiteral';
   value: number;
+}
+
+export interface StringLiteralNode extends NodeBase {
+  type: 'StringLiteral';
+  value: string;
+}
+
+export interface BooleanLiteralNode extends NodeBase {
+  type: 'BooleanLiteral';
+  value: boolean;
 }
 
 export interface AssignmentExpressionNode extends NodeBase {
@@ -72,6 +91,37 @@ export interface BinaryExpressionNode extends NodeBase {
   operator: string;
   left: Node;
   right: Node;
+}
+
+export interface LogicalExpressionNode extends NodeBase {
+  type: 'LogicalExpression';
+  operator: string;
+  left: Node;
+  right: Node;
+}
+
+export interface ArrayExpressionNode extends NodeBase {
+  type: 'ArrayExpression';
+  elements: Node[];
+}
+
+export interface MemberExpressionNode extends NodeBase {
+  type: 'MemberExpression';
+  object: Node;
+  property: Node;
+  computed: boolean; // true for foo[bar], false for foo.bar
+}
+
+export interface ObjectExpressionNode extends NodeBase {
+  type: 'ObjectExpression';
+  properties: PropertyNode[];
+}
+
+export interface PropertyNode extends NodeBase {
+  type: 'Property';
+  key: IdentifierNode | StringLiteralNode;
+  value: Node;
+  accept(visitor: Visitor): void;
 }
 
 export interface VariableDeclarationNode extends NodeBase {
@@ -200,4 +250,32 @@ export interface UnaryExpressionNode extends NodeBase {
 
 (CallExpressionNode.prototype as any).accept = function(visitor: Visitor) {
   visitor.CallExpression(this);
+};
+
+(BooleanLiteralNode.prototype as any).accept = function(visitor: Visitor) {
+  visitor.BooleanLiteral(this);
+};
+
+(StringLiteralNode.prototype as any).accept = function(visitor: Visitor) {
+  visitor.StringLiteral(this);
+};
+
+(LogicalExpressionNode.prototype as any).accept = function(visitor: Visitor) {
+  visitor.LogicalExpression(this);
+};
+
+(ArrayExpressionNode.prototype as any).accept = function(visitor: Visitor) {
+  visitor.ArrayExpression(this);
+};
+
+(ObjectExpressionNode.prototype as any).accept = function(visitor: Visitor) {
+  visitor.ObjectExpression(this);
+};
+
+(PropertyNode.prototype as any).accept = function(visitor: Visitor) {
+  visitor.Property(this);
+};
+
+(MemberExpressionNode.prototype as any).accept = function(visitor: Visitor) {
+  visitor.MemberExpression(this);
 };

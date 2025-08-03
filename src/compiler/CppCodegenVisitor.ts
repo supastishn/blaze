@@ -15,6 +15,35 @@ export class CppCodegenVisitor implements ast.Visitor {
 
   Program(node: ast.ProgramNode) {
     this.emit('#include <iostream>');
+    this.emit('#include <string>');
+    this.emit('#include <vector>');
+    this.emit('#include <any>');
+    this.emit('#include <map>');
+    this.emit('#include <variant>');
+    this.emit('');
+    this.emit('// Forward declaration for recursive structures');
+    this.emit('void print_any(const std::any& value);');
+    this.emit('');
+    this.emit('void print_any(const std::any& value) {');
+    this.emit('  if (value.type() == typeid(int)) { std::cout << std::any_cast<int>(value); }');
+    this.emit('  else if (value.type() == typeid(double)) { std::cout << std::any_cast<double>(value); }');
+    this.emit('  else if (value.type() == typeid(bool)) { std::cout << (std::any_cast<bool>(value) ? "true" : "false"); }');
+    this.emit('  else if (value.type() == typeid(const char*)) { std::cout << "\"" << std::any_cast<const char*>(value) << "\""; }');
+    this.emit('  else if (value.type() == typeid(std::string)) { std::cout << "\"" << std::any_cast<std::string>(value) << "\""; }');
+    this.emit('  else if (value.type() == typeid(std::vector<std::any>)) {');
+    this.emit('    const auto& vec = std::any_cast<const std::vector<std::any>&>(value);');
+    this.emit('    std::cout << "[";');
+    this.emit('    for (size_t i = 0; i < vec.size(); ++i) { print_any(vec[i]); if (i < vec.size() - 1) std::cout << ", "; }');
+    this.emit('    std::cout << "]";');
+    this.emit('  } else if (value.type() == typeid(std::map<std::string, std::any>)) {');
+    this.emit('    const auto& map = std::any_cast<const std::map<std::string, std::any>&>(value);');
+    this.emit('    std::cout << "{";');
+    this.emit('    size_t i = 0;');
+    this.emit('    for (const auto& pair : map) { std::cout << "\"" << pair.first << "\": "; print_any(pair.second); if (i < map.size() - 1) std::cout << ", "; i++; }');
+    this.emit('    std::cout << "}";');
+    this.emit('  } else { std::cout << "unsupported_type"; }');
+    this.emit('}');
+    this.emit('');
     this.emit('using namespace std;');
     this.emit('');
 
@@ -76,19 +105,48 @@ export class CppCodegenVisitor implements ast.Visitor {
     // Handled in genExpression
   }
 
+  BooleanLiteral(node: ast.BooleanLiteralNode) {
+    // Handled in genExpression
+  }
+  
+  StringLiteral(node: ast.StringLiteralNode) {
+    // Handled in genExpression
+  }
+
+  LogicalExpression(node: ast.LogicalExpressionNode) {
+    // Handled in genExpression
+  }
+
+  ArrayExpression(node: ast.ArrayExpressionNode) {
+    // Handled in genExpression
+  }
+  
+  ObjectExpression(node: ast.ObjectExpressionNode) {
+    // Handled in genExpression
+  }
+  
+  Property(node: ast.PropertyNode) {
+    // Handled in genExpression
+  }
+  
+  MemberExpression(node: ast.MemberExpressionNode) {
+    // Handled in genExpression
+  }
+
   VariableDeclaration(node: ast.VariableDeclarationNode) {
     const varName = node.identifier.name;
     if (!this.declaredVars.has(varName)) {
       const initValue = node.initializer ?
         this.genExpression(node.initializer) : '0';
-      this.emit(`int ${varName} = ${initValue};`);
+      this.emit(`auto ${varName} = ${initValue};`);
       this.declaredVars.add(varName);
     }
   }
 
   PrintStatement(node: ast.PrintStatementNode) {
     const exprValue = this.genExpression(node.expression);
-    this.emit(`std::cout << ${exprValue} << std::endl;`);
+    this.emit(`print_any(${exprValue});`);
+    this.emit(`std::cout << std::endl;`);
   }
 
   BlockStatement(node: ast.BlockStatementNode) {
@@ -154,16 +212,22 @@ export class CppCodegenVisitor implements ast.Visitor {
         return (node as ast.IdentifierNode).name;
       case 'NumericLiteral':
         return String((node as ast.NumericLiteralNode).value);
+      case 'StringLiteral':
+        return `std::string("${(node as ast.StringLiteralNode).value}")`;
+      case 'BooleanLiteral':
+        return (node as ast.BooleanLiteralNode).value ? 'true' : 'false';
       case 'AssignmentExpression': {
         const assignNode = node as ast.AssignmentExpressionNode;
-        return `${assignNode.left.name} = ${this.genExpression(assignNode.right)}`;
+        const left = this.genExpression(assignNode.left);
+        return `${left} = ${this.genExpression(assignNode.right)}`;
       }
       case 'UnaryExpression': {
         const unaryNode = node as ast.UnaryExpressionNode;
         return `(${unaryNode.operator}${this.genExpression(unaryNode.argument)})`;
       }
-      case 'BinaryExpression': {
-        const binNode = node as ast.BinaryExpressionNode;
+      case 'BinaryExpression':
+      case 'LogicalExpression': {
+        const binNode = node as ast.BinaryExpressionNode; // works for both
         return `(${this.genExpression(binNode.left)} ${binNode.operator} ${this.genExpression(binNode.right)})`;
       }
       case 'CallExpression': {
@@ -171,6 +235,31 @@ export class CppCodegenVisitor implements ast.Visitor {
         const callee = this.genExpression(callNode.callee);
         const args = callNode.arguments.map(arg => this.genExpression(arg)).join(', ');
         return `${callee}(${args})`;
+      }
+      case 'MemberExpression': {
+        const memberNode = node as ast.MemberExpressionNode;
+        const obj = this.genExpression(memberNode.object);
+        if (memberNode.computed) {
+          return `${obj}[${this.genExpression(memberNode.property)}]`;
+        } else {
+          const prop = (memberNode.property as ast.IdentifierNode).name;
+          // Assuming map for dot notation
+          return `std::any_cast<std::map<std::string, std::any>&>(${obj})["${prop}"]`;
+        }
+      }
+      case 'ArrayExpression': {
+        const arrayNode = node as ast.ArrayExpressionNode;
+        const elements = arrayNode.elements.map(el => this.genExpression(el)).join(', ');
+        return `std::vector<std::any>{${elements}}`;
+      }
+      case 'ObjectExpression': {
+        const objNode = node as ast.ObjectExpressionNode;
+        const props = objNode.properties.map(p => {
+          const key = (p.key.type === 'Identifier') ? `"${p.key.name}"` : this.genExpression(p.key);
+          const val = this.genExpression(p.value);
+          return `{${key}, ${val}}`;
+        }).join(', ');
+        return `std::map<std::string, std::any>{${props}}`;
       }
       default:
         throw new Error(`Unsupported expression type: ${node.type}`);
