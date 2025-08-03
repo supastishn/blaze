@@ -17,11 +17,24 @@ export class CppCodegenVisitor implements ast.Visitor {
     this.emit('#include <iostream>');
     this.emit('using namespace std;');
     this.emit('');
+
+    // Hoist function declarations
+    node.body.forEach(stmt => {
+      if (stmt.type === 'FunctionDeclaration') {
+        stmt.accept(this);
+        this.emit('');
+      }
+    });
+
     this.emit('int main() {');
     this.indentLevel++;
 
     this.declaredVars.clear(); // Initialize only once
-    node.body.forEach(stmt => stmt.accept(this));
+    node.body.forEach(stmt => {
+      if (stmt.type !== 'FunctionDeclaration') {
+        stmt.accept(this);
+      }
+    });
 
     this.emit('return 0;');
     this.indentLevel--;
@@ -41,6 +54,25 @@ export class CppCodegenVisitor implements ast.Visitor {
   }
 
   UnaryExpression(node: ast.UnaryExpressionNode) {
+    // Handled in genExpression
+  }
+
+  FunctionDeclaration(node: ast.FunctionDeclarationNode) {
+    const fnName = node.name.name;
+    const params = node.params.map(p => `int ${p.name}`).join(', ');
+    this.emit(`int ${fnName}(${params})`); // Assume int return for now
+    node.body.accept(this);
+  }
+
+  ReturnStatement(node: ast.ReturnStatementNode) {
+    if (node.argument) {
+      this.emit(`return ${this.genExpression(node.argument)};`);
+    } else {
+      this.emit('return 0;'); // Default return for void functions, but we assume int
+    }
+  }
+
+  CallExpression(node: ast.CallExpressionNode) {
     // Handled in genExpression
   }
 
@@ -133,6 +165,12 @@ export class CppCodegenVisitor implements ast.Visitor {
       case 'BinaryExpression': {
         const binNode = node as ast.BinaryExpressionNode;
         return `(${this.genExpression(binNode.left)} ${binNode.operator} ${this.genExpression(binNode.right)})`;
+      }
+      case 'CallExpression': {
+        const callNode = node as ast.CallExpressionNode;
+        const callee = this.genExpression(callNode.callee);
+        const args = callNode.arguments.map(arg => this.genExpression(arg)).join(', ');
+        return `${callee}(${args})`;
       }
       default:
         throw new Error(`Unsupported expression type: ${node.type}`);

@@ -27,6 +27,9 @@ export const TokenType = {
   GreaterThan: '>',
   LessThanOrEquals: '<=',
   GreaterThanOrEquals: '>=',
+  Comma: ',',
+  Function: 'function',
+  Return: 'return',
 } as const;
 
 export type TokenType = keyof typeof TokenType;
@@ -137,6 +140,11 @@ export class Lexer {
       return { type: 'RightBrace', value: '}', line: this.line, column: startCol };
     }
 
+    if (char === ',') {
+      this.advance();
+      return { type: 'Comma', value: ',', line: this.line, column: startCol };
+    }
+
     if (char === ';') {
       this.advance();
       return { type: 'Semicolon', value: ';', line: this.line, column: startCol };
@@ -172,6 +180,12 @@ export class Lexer {
     }
     if (value === 'for') {
       return { type: 'For', value: 'for', line: startLine, column: startCol };
+    }
+    if (value === 'function') {
+      return { type: 'Function', value: 'function', line: startLine, column: startCol };
+    }
+    if (value === 'return') {
+      return { type: 'Return', value: 'return', line: startLine, column: startCol };
     }
     if (value === 'print') {
       return { type: 'Print', value: 'print', line: startLine, column: startCol };
@@ -254,12 +268,16 @@ export class Parser {
       stmt = this.parseWhileStatement();
     } else if (this.currentToken.type === 'For') {
       stmt = this.parseForStatement();
+    } else if (this.currentToken.type === 'Function') {
+      stmt = this.parseFunctionDeclaration();
+    } else if (this.currentToken.type === 'Return') {
+      stmt = this.parseReturnStatement();
     } else {
       stmt = this.parseExpressionStatement();
     }
 
     // Handle semicolon for all non-block statements
-    if (stmt.type !== 'BlockStatement' && stmt.type !== 'IfStatement' && stmt.type !== 'WhileStatement' && stmt.type !== 'ForStatement' && this.currentToken.type === 'Semicolon') {
+    if (stmt.type !== 'BlockStatement' && stmt.type !== 'IfStatement' && stmt.type !== 'WhileStatement' && stmt.type !== 'ForStatement' && stmt.type !== 'FunctionDeclaration' && this.currentToken.type === 'Semicolon') {
       this.eat('Semicolon');
     }
     
@@ -456,34 +474,97 @@ export class Parser {
     } as ast.ForStatementNode;
   }
 
+  private parseFunctionDeclaration(): ast.FunctionDeclarationNode {
+    this.eat('Function');
+    const name = this.parseIdentifier();
+    
+    this.eat('LeftParen');
+    const params: ast.IdentifierNode[] = [];
+    if (this.currentToken.type !== 'RightParen') {
+        params.push(this.parseIdentifier());
+        while (this.currentToken.type === 'Comma') {
+            this.eat('Comma');
+            params.push(this.parseIdentifier());
+        }
+    }
+    this.eat('RightParen');
+    
+    const body = this.parseBlockStatement();
+    
+    return {
+        type: 'FunctionDeclaration',
+        name,
+        params,
+        body,
+        accept(visitor: ast.Visitor) {
+            visitor.FunctionDeclaration(this);
+        }
+    } as ast.FunctionDeclarationNode;
+  }
+
+  private parseReturnStatement(): ast.ReturnStatementNode {
+    this.eat('Return');
+    let argument: ast.Node | null = null;
+    if (this.currentToken.type !== 'Semicolon') {
+        argument = this.parseExpression();
+    }
+    
+    return {
+        type: 'ReturnStatement',
+        argument,
+        accept(visitor: ast.Visitor) {
+            visitor.ReturnStatement(this);
+        }
+    } as ast.ReturnStatementNode;
+  }
+
   private parseExpression(): ast.Node {
     return this.parseBinaryExpression(0);
   }
 
   private parseAssignmentExpression(): ast.Node {
-    if (this.currentToken.type === 'Identifier') {
-      const identifier = this.parseIdentifier();
-      const nextToken = this.currentToken; // Capture token type to avoid narrowing issues
+    let expr = this.parsePrimaryExpression();
 
-      if (nextToken.type === 'Assignment') {
-        this.eat('Assignment');
-        const right = this.parseExpression();
-        return { 
-          type: 'AssignmentExpression',
-          left: identifier,
-          right,
-          accept(visitor: ast.Visitor) {
-            this.left.accept(visitor);
-            this.right.accept(visitor);
-            visitor.AssignmentExpression(this);
-          }
-        } as ast.AssignmentExpressionNode;
+    while (this.currentToken.type === 'LeftParen') {
+      this.eat('LeftParen');
+      const args: ast.Node[] = [];
+      if (this.currentToken.type !== 'RightParen') {
+        args.push(this.parseExpression());
+        while (this.currentToken.type === 'Comma') {
+          this.eat('Comma');
+          args.push(this.parseExpression());
+        }
       }
+      this.eat('RightParen');
+      expr = {
+        type: 'CallExpression',
+        callee: expr,
+        arguments: args,
+        accept(visitor: ast.Visitor) {
+            visitor.CallExpression(this);
+        }
+      } as ast.CallExpressionNode;
+    }
 
-      return identifier;
+    if (this.currentToken.type === 'Assignment') {
+      if (expr.type !== 'Identifier') {
+        throw new Error('Invalid left-hand side in assignment expression.');
+      }
+      this.eat('Assignment');
+      const right = this.parseExpression();
+      return { 
+        type: 'AssignmentExpression',
+        left: expr,
+        right,
+        accept(visitor: ast.Visitor) {
+          this.left.accept(visitor);
+          this.right.accept(visitor);
+          visitor.AssignmentExpression(this);
+        }
+      } as ast.AssignmentExpressionNode;
     }
     
-    return this.parsePrimaryExpression();
+    return expr;
   }
 
   private parsePrimaryExpression(): ast.Node {

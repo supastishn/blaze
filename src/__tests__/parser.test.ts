@@ -66,6 +66,24 @@ describe('Parser', () => {
     expect((stmt.initializer.argument as any).type).toBe('NumericLiteral');
   });
 
+  test('parses function declaration', () => {
+    const ast = parse('function add(a, b) { return a + b; }');
+    const stmt = ast.body[0] as any;
+    expect(stmt.type).toBe('FunctionDeclaration');
+    expect(stmt.name.name).toBe('add');
+    expect(stmt.params.length).toBe(2);
+    expect(stmt.body.type).toBe('BlockStatement');
+  });
+
+  test('parses call expression', () => {
+    const ast = parse('add(1, 2);');
+    const stmt = ast.body[0] as any;
+    expect(stmt.type).toBe('ExpressionStatement');
+    expect(stmt.expression.type).toBe('CallExpression');
+    expect(stmt.expression.callee.name).toBe('add');
+    expect(stmt.expression.arguments.length).toBe(2);
+  });
+
   test('visits nodes with PrintVisitor', () => {
     const ast = parse('let x = 5');
     const printVisitor = new PrintVisitor();

@@ -13,6 +13,9 @@ export interface Visitor {
   WhileStatement(node: WhileStatementNode): void;
   ForStatement(node: ForStatementNode): void;
   UnaryExpression(node: UnaryExpressionNode): void;
+  FunctionDeclaration(node: FunctionDeclarationNode): void;
+  ReturnStatement(node: ReturnStatementNode): void;
+  CallExpression(node: CallExpressionNode): void;
 }
 
 // Add accept() methods to all node interfaces
@@ -24,7 +27,8 @@ export interface NodeBase {
 export type Node = ProgramNode | IdentifierNode | NumericLiteralNode
     | AssignmentExpressionNode | ExpressionStatementNode | FirstExpressionNode
     | BinaryExpressionNode | VariableDeclarationNode | PrintStatementNode | BlockStatementNode
-    | IfStatementNode | WhileStatementNode | ForStatementNode | UnaryExpressionNode;
+    | IfStatementNode | WhileStatementNode | ForStatementNode | UnaryExpressionNode
+    | FunctionDeclarationNode | ReturnStatementNode | CallExpressionNode;
 
 export interface ProgramNode extends NodeBase {
   type: 'Program';
@@ -45,6 +49,12 @@ export interface AssignmentExpressionNode extends NodeBase {
   type: 'AssignmentExpression';
   left: IdentifierNode;
   right: Node;
+}
+
+export interface CallExpressionNode extends NodeBase {
+  type: 'CallExpression';
+  callee: Node;
+  arguments: Node[];
 }
 
 export interface ExpressionStatementNode extends NodeBase {
@@ -68,6 +78,18 @@ export interface VariableDeclarationNode extends NodeBase {
   type: 'VariableDeclaration';
   identifier: IdentifierNode;
   initializer: Node | null;
+}
+
+export interface FunctionDeclarationNode extends NodeBase {
+  type: 'FunctionDeclaration';
+  name: IdentifierNode;
+  params: IdentifierNode[];
+  body: BlockStatementNode;
+}
+
+export interface ReturnStatementNode extends NodeBase {
+  type: 'ReturnStatement';
+  argument: Node | null;
 }
 
 export interface PrintStatementNode extends NodeBase {
@@ -166,4 +188,16 @@ export interface UnaryExpressionNode extends NodeBase {
 
 (UnaryExpressionNode.prototype as any).accept = function(visitor: Visitor) {
   visitor.UnaryExpression(this);
+};
+
+(FunctionDeclarationNode.prototype as any).accept = function(visitor: Visitor) {
+  visitor.FunctionDeclaration(this);
+};
+
+(ReturnStatementNode.prototype as any).accept = function(visitor: Visitor) {
+  visitor.ReturnStatement(this);
+};
+
+(CallExpressionNode.prototype as any).accept = function(visitor: Visitor) {
+  visitor.CallExpression(this);
 };

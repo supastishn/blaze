@@ -54,6 +54,21 @@ describe('Compiler', () => {
     expect(cpp).toContain('int x = (-5);');
   });
 
+  test('compiles function declaration and call', () => {
+    const code = `
+      function add(a, b) {
+        return a + b;
+      }
+      let result = add(3, 4);
+      print(result);
+    `;
+    const cpp = compile(code);
+    expect(cpp).toContain('int add(int a, int b)');
+    expect(cpp).toContain('return (a + b);');
+    expect(cpp).toContain('int result = add(3, 4);');
+    expect(cpp).toContain('std::cout << result << std::endl;');
+  });
+
   test('reports compilation errors', () => {
     const code = 'let x = ;';
     const cpp = compile(code);
