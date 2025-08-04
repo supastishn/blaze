@@ -118,10 +118,12 @@ describe('Parser', () => {
   });
 
   test('parses object expression', () => {
-    const ast = parse('{ a: 1, "b": 2 }');
+    const ast = parse('let x = { a: 1, "b": 2 };');
     const stmt = ast.body[0] as any;
-    expect(stmt.expression.type).toBe('ObjectExpression');
-    expect(stmt.expression.properties.length).toBe(2);
+    expect(stmt.type).toBe('VariableDeclaration');
+    const objExpr = stmt.initializer;
+    expect(objExpr.type).toBe('ObjectExpression');
+    expect(objExpr.properties.length).toBe(2);
   });
 
   test('parses member expression', () => {

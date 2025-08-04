@@ -255,7 +255,12 @@ export class CppCodegenVisitor implements ast.Visitor {
       case 'ObjectExpression': {
         const objNode = node as ast.ObjectExpressionNode;
         const props = objNode.properties.map(p => {
-          const key = (p.key.type === 'Identifier') ? `"${p.key.name}"` : this.genExpression(p.key);
+          let key;
+          if (p.key.type === 'Identifier') {
+            key = `"${p.key.name}"`;
+          } else { // StringLiteralNode
+            key = `"${(p.key as ast.StringLiteralNode).value}"`;
+          }
           const val = this.genExpression(p.value);
           return `{${key}, ${val}}`;
         }).join(', ');

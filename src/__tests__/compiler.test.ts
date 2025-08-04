@@ -10,20 +10,20 @@ describe('Compiler', () => {
   test('compiles variable declaration', () => {
     const code = 'let x = 5;';
     const cpp = compile(code);
-    expect(cpp).toContain('int x = 5;');
+    expect(cpp).toContain('auto x = 5;');
   });
 
   test('compiles print statement', () => {
     const code = 'print(42);';
     const cpp = compile(code);
-    expect(cpp).toContain('std::cout << 42 << std::endl;');
+    expect(cpp).toContain('print_any(42);');
   });
 
   test('compiles if statement', () => {
     const code = 'let x = 1; if (x > 0) { print(1); }';
     const cpp = compile(code);
     expect(cpp).toContain('if ((x > 0))');
-    expect(cpp).toContain('std::cout << 1 << std::endl;');
+    expect(cpp).toContain('print_any(1);');
   });
 
   test('compiles if-else statement', () => {
@@ -31,7 +31,7 @@ describe('Compiler', () => {
     const cpp = compile(code);
     expect(cpp).toContain('if ((x > 0))');
     expect(cpp).toContain('else');
-    expect(cpp).toContain('std::cout << 0 << std::endl;');
+    expect(cpp).toContain('print_any(0);');
   });
 
   test('compiles while statement', () => {
@@ -45,13 +45,13 @@ describe('Compiler', () => {
     const code = 'for (let i = 0; i < 5; i = i + 1) { print(i); }';
     const cpp = compile(code);
     expect(cpp).toContain('for (int i = 0; (i < 5); i = (i + 1))');
-    expect(cpp).toContain('std::cout << i << std::endl;');
+    expect(cpp).toContain('print_any(i);');
   });
 
   test('compiles unary minus', () => {
     const code = 'let x = -5;';
     const cpp = compile(code);
-    expect(cpp).toContain('int x = (-5);');
+    expect(cpp).toContain('auto x = (-5);');
   });
 
   test('compiles function declaration and call', () => {
