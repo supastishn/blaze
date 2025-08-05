@@ -1,5 +1,9 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { compile } from '../../../src/compiler'
+import CodeMirror from '@uiw/react-codemirror'
+import { javascript } from '@codemirror/lang-javascript'
+import { cpp } from '@codemirror/lang-cpp'
+import { oneDark } from '@codemirror/theme-one-dark'
 import './App.css'
 
 const initialCode = `
@@ -22,21 +26,33 @@ function App() {
     setCppCode(result);
   };
 
+  const onTsChange = useCallback((value) => {
+    setTsCode(value);
+  }, []);
+
   return (
     <>
       <h1>ts2cpp</h1>
       <div className="container">
         <div className="editor">
           <h2>TypeScript Input</h2>
-          <textarea
+          <CodeMirror
             value={tsCode}
-            onChange={(e) => setTsCode(e.target.value)}
-            spellCheck="false"
+            height="600px"
+            extensions={[javascript({ typescript: true })]}
+            onChange={onTsChange}
+            theme={oneDark}
           />
         </div>
         <div className="output">
           <h2>C++ Output</h2>
-          <pre><code>{cppCode}</code></pre>
+          <CodeMirror
+            value={cppCode}
+            height="600px"
+            extensions={[cpp()]}
+            readOnly={true}
+            theme={oneDark}
+          />
         </div>
       </div>
       <button onClick={handleCompile}>Compile</button>
