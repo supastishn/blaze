@@ -70,7 +70,7 @@ export interface BooleanLiteralNode extends NodeBase {
 
 export interface AssignmentExpressionNode extends NodeBase {
   type: 'AssignmentExpression';
-  left: IdentifierNode;
+  left: Node; // Can be Identifier or MemberExpression
   right: Node;
 }
 

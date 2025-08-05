@@ -606,7 +606,18 @@ export class Parser {
   }
 
   private parseMethodDefinition(): ast.MethodDefinitionNode {
-    const key = this.parseIdentifier();
+    let key: ast.IdentifierNode;
+    if (this.currentToken.type === 'Constructor') {
+      const token = this.currentToken;
+      this.eat('Constructor');
+      key = {
+        type: 'Identifier',
+        name: token.value as string,
+        accept(visitor: ast.Visitor) { visitor.Identifier(this); }
+      } as ast.IdentifierNode;
+    } else {
+      key = this.parseIdentifier();
+    }
     const kind = key.name === 'constructor' ? 'constructor' : 'method';
     
     this.eat('LeftParen');
@@ -663,7 +674,7 @@ export class Parser {
       const right = this.parseAssignmentExpression(); // Right-associative
       return { 
         type: 'AssignmentExpression',
-        left: left as ast.IdentifierNode, // Simplified, validation done above
+        left,
         right,
         accept(visitor: ast.Visitor) {
           this.left.accept(visitor);
@@ -676,12 +687,12 @@ export class Parser {
     return left;
   }
 
-  private parseCallMemberExpression(): ast.Node {
+  private parseCallMemberExpression(allowCall = true): ast.Node {
     let expr = this.parsePrimaryExpression();
 
     while (true) {
       const tokenType = this.currentToken.type as string;
-      if (tokenType === 'LeftParen') {
+      if (allowCall && tokenType === 'LeftParen') {
         this.eat('LeftParen');
         const args: ast.Node[] = [];
         if ((this.currentToken.type as string) !== 'RightParen') {
@@ -789,7 +800,7 @@ export class Parser {
 
   private parseNewExpression(): ast.NewExpressionNode {
     this.eat('New');
-    const callee = this.parseCallMemberExpression(); // Parses `MyClass` or `MyClass.Something`
+    const callee = this.parseCallMemberExpression(false); // Parses callee but not call arguments
     
     // Arguments are optional for `new`
     let args: ast.Node[] = [];
