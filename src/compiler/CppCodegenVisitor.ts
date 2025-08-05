@@ -4,6 +4,8 @@ export class CppCodegenVisitor implements ast.Visitor {
   private output: string[] = [];
   private indentLevel = 0;
   private declaredVars = new Set<string>();
+  private declaredClasses = new Set<string>();
+  private currentClass: string | null = null;
 
   getCode(): string {
     return this.output.join('\n');
@@ -20,11 +22,24 @@ export class CppCodegenVisitor implements ast.Visitor {
     this.emit('#include <any>');
     this.emit('#include <map>');
     this.emit('#include <variant>');
+    this.emit('#include <memory>');
     this.emit('');
     this.emit('// Forward declaration for recursive structures');
     this.emit('void print_any(const std::any& value);');
     this.emit('');
+
+    // Forward-declare all classes
+    node.body.forEach(stmt => {
+      if (stmt.type === 'ClassDeclaration') {
+        const className = (stmt as ast.ClassDeclarationNode).name.name;
+        this.emit(`struct ${className};`);
+        this.declaredClasses.add(className);
+      }
+    });
+    this.emit('');
+
     this.emit('void print_any(const std::any& value) {');
+    this.emit('  if (!value.has_value()) { std::cout << "null"; return; }');
     this.emit('  if (value.type() == typeid(int)) { std::cout << std::any_cast<int>(value); }');
     this.emit('  else if (value.type() == typeid(double)) { std::cout << std::any_cast<double>(value); }');
     this.emit('  else if (value.type() == typeid(bool)) { std::cout << (std::any_cast<bool>(value) ? "true" : "false"); }');
@@ -41,15 +56,19 @@ export class CppCodegenVisitor implements ast.Visitor {
     this.emit('    size_t i = 0;');
     this.emit('    for (const auto& pair : map) { std::cout << "\"" << pair.first << "\": "; print_any(pair.second); if (i < map.size() - 1) std::cout << ", "; i++; }');
     this.emit('    std::cout << "}";');
+    this.declaredClasses.forEach(name => {
+      this.emit(`  }} else if (value.type() == typeid(std::shared_ptr<${name}>)) {`);
+      this.emit(`    std::cout << "[instance of ${name}]";`);
+    });
     this.emit('  } else { std::cout << "unsupported_type"; }');
     this.emit('}');
     this.emit('');
     this.emit('using namespace std;');
     this.emit('');
 
-    // Hoist function declarations
+    // Hoist class and function declarations
     node.body.forEach(stmt => {
-      if (stmt.type === 'FunctionDeclaration') {
+      if (stmt.type === 'ClassDeclaration' || stmt.type === 'FunctionDeclaration') {
         stmt.accept(this);
         this.emit('');
       }
@@ -58,9 +77,9 @@ export class CppCodegenVisitor implements ast.Visitor {
     this.emit('int main() {');
     this.indentLevel++;
 
-    this.declaredVars.clear(); // Initialize only once
+    this.declaredVars.clear();
     node.body.forEach(stmt => {
-      if (stmt.type !== 'FunctionDeclaration') {
+      if (stmt.type !== 'FunctionDeclaration' && stmt.type !== 'ClassDeclaration') {
         stmt.accept(this);
       }
     });
@@ -83,6 +102,75 @@ export class CppCodegenVisitor implements ast.Visitor {
   }
 
   UnaryExpression(node: ast.UnaryExpressionNode) {
+    // Handled in genExpression
+  }
+
+  private findProperties(ctor: ast.MethodDefinitionNode): Set<string> {
+    const properties = new Set<string>();
+    const visitor = (node: ast.Node) => {
+      if (node.type === 'AssignmentExpression') {
+        const assignment = node as ast.AssignmentExpressionNode;
+        if (assignment.left.type === 'MemberExpression') {
+          const member = assignment.left as ast.MemberExpressionNode;
+          if (member.object.type === 'ThisExpression' && !member.computed) {
+            properties.add((member.property as ast.IdentifierNode).name);
+          }
+        }
+      }
+      // a simple recursive traversal
+      for (const key in node) {
+        if (typeof (node as any)[key] === 'object' && (node as any)[key] !== null && typeof (node as any)[key].accept === 'function') {
+          visitor((node as any)[key]);
+        } else if (Array.isArray((node as any)[key])) {
+          (node as any)[key].forEach((n: any) => {
+            if (typeof n === 'object' && n !== null && typeof n.accept === 'function') {
+              visitor(n)
+            }
+          });
+        }
+      }
+    };
+    ctor.body.body.forEach(visitor);
+    return properties;
+  }
+
+  ClassDeclaration(node: ast.ClassDeclarationNode) {
+    const className = node.name.name;
+    this.currentClass = className;
+    this.emit(`struct ${className} {`);
+    this.indentLevel++;
+
+    const constructorNode = node.body.find(m => m.kind === 'constructor');
+    if (constructorNode) {
+      const properties = this.findProperties(constructorNode);
+      properties.forEach(prop => {
+        this.emit(`std::any ${prop};`);
+      });
+    }
+
+    node.body.forEach(method => method.accept(this));
+
+    this.indentLevel--;
+    this.emit(`};`);
+    this.currentClass = null;
+  }
+
+  MethodDefinition(node: ast.MethodDefinitionNode) {
+    const params = node.params.map(p => `std::any ${p.name}`).join(', ');
+    if (node.kind === 'constructor') {
+      this.emit(`${this.currentClass}(${params})`);
+    } else {
+      // Assuming all methods return std::any for simplicity
+      this.emit(`std::any ${node.key.name}(${params})`);
+    }
+    node.body.accept(this);
+  }
+
+  ThisExpression(node: ast.ThisExpressionNode) {
+    // Handled in genExpression
+  }
+  
+  NewExpression(node: ast.NewExpressionNode) {
     // Handled in genExpression
   }
 
@@ -233,6 +321,14 @@ export class CppCodegenVisitor implements ast.Visitor {
         return `std::string("${(node as ast.StringLiteralNode).value}")`;
       case 'BooleanLiteral':
         return (node as ast.BooleanLiteralNode).value ? 'true' : 'false';
+      case 'ThisExpression':
+        return 'this';
+      case 'NewExpression': {
+        const newNode = node as ast.NewExpressionNode;
+        const callee = this.genExpression(newNode.callee);
+        const args = newNode.arguments.map(arg => this.genExpression(arg)).join(', ');
+        return `std::make_shared<${callee}>(${args})`;
+      }
       case 'AssignmentExpression': {
         const assignNode = node as ast.AssignmentExpressionNode;
         const left = this.genExpression(assignNode.left);
@@ -249,19 +345,27 @@ export class CppCodegenVisitor implements ast.Visitor {
       }
       case 'CallExpression': {
         const callNode = node as ast.CallExpressionNode;
-        const callee = this.genExpression(callNode.callee);
         const args = callNode.arguments.map(arg => this.genExpression(arg)).join(', ');
+
+        if (callNode.callee.type === 'MemberExpression') {
+          const memberNode = callNode.callee as ast.MemberExpressionNode;
+          const obj = this.genExpression(memberNode.object);
+          const prop = this.genExpression(memberNode.property);
+          return `${obj}->${prop}(${args})`;
+        }
+        
+        const callee = this.genExpression(callNode.callee);
         return `${callee}(${args})`;
       }
       case 'MemberExpression': {
         const memberNode = node as ast.MemberExpressionNode;
         const obj = this.genExpression(memberNode.object);
+        const prop = this.genExpression(memberNode.property);
+
         if (memberNode.computed) {
-          return `${obj}[${this.genExpression(memberNode.property)}]`;
+          return `${obj}[${prop}]`;
         } else {
-          const prop = (memberNode.property as ast.IdentifierNode).name;
-          // Assuming map for dot notation
-          return `std::any_cast<std::map<std::string, std::any>&>(${obj})["${prop}"]`;
+          return `${obj}->${prop}`;
         }
       }
       case 'ArrayExpression': {

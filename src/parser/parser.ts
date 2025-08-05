@@ -40,6 +40,10 @@ export const TokenType = {
   PipePipe: '||',
   Function: 'function',
   Return: 'return',
+  Class: 'class',
+  Constructor: 'constructor',
+  This: 'this',
+  New: 'new',
 } as const;
 
 export type TokenType = keyof typeof TokenType;
@@ -237,6 +241,18 @@ export class Lexer {
     if (value === 'return') {
       return { type: 'Return', value: 'return', line: startLine, column: startCol };
     }
+    if (value === 'class') {
+      return { type: 'Class', value: 'class', line: startLine, column: startCol };
+    }
+    if (value === 'constructor') {
+      return { type: 'Constructor', value: 'constructor', line: startLine, column: startCol };
+    }
+    if (value === 'this') {
+      return { type: 'This', value: 'this', line: startLine, column: startCol };
+    }
+    if (value === 'new') {
+      return { type: 'New', value: 'new', line: startLine, column: startCol };
+    }
     return { type: 'Identifier', value, line: startLine, column: startCol };
   }
 
@@ -330,6 +346,8 @@ export class Parser {
       stmt = this.parseForStatement();
     } else if (this.currentToken.type === 'Function') {
       stmt = this.parseFunctionDeclaration();
+    } else if (this.currentToken.type === 'Class') {
+      stmt = this.parseClassDeclaration();
     } else if (this.currentToken.type === 'Return') {
       stmt = this.parseReturnStatement();
     } else {
@@ -337,7 +355,7 @@ export class Parser {
     }
 
     // Handle semicolon for all non-block statements
-    if (stmt.type !== 'BlockStatement' && stmt.type !== 'IfStatement' && stmt.type !== 'WhileStatement' && stmt.type !== 'ForStatement' && stmt.type !== 'FunctionDeclaration' && this.currentToken.type === 'Semicolon') {
+    if (stmt.type !== 'BlockStatement' && stmt.type !== 'IfStatement' && stmt.type !== 'WhileStatement' && stmt.type !== 'ForStatement' && stmt.type !== 'FunctionDeclaration' && stmt.type !== 'ClassDeclaration' && this.currentToken.type === 'Semicolon') {
       this.eat('Semicolon');
     }
     
@@ -569,6 +587,51 @@ export class Parser {
     } as ast.FunctionDeclarationNode;
   }
 
+  private parseClassDeclaration(): ast.ClassDeclarationNode {
+    this.eat('Class');
+    const name = this.parseIdentifier();
+    this.eat('LeftBrace');
+    const body: ast.MethodDefinitionNode[] = [];
+    while (this.currentToken.type !== 'RightBrace') {
+      body.push(this.parseMethodDefinition());
+    }
+    this.eat('RightBrace');
+
+    return {
+      type: 'ClassDeclaration',
+      name,
+      body,
+      accept(visitor: ast.Visitor) { visitor.ClassDeclaration(this); }
+    } as ast.ClassDeclarationNode;
+  }
+
+  private parseMethodDefinition(): ast.MethodDefinitionNode {
+    const key = this.parseIdentifier();
+    const kind = key.name === 'constructor' ? 'constructor' : 'method';
+    
+    this.eat('LeftParen');
+    const params: ast.IdentifierNode[] = [];
+    if (this.currentToken.type !== 'RightParen') {
+      params.push(this.parseIdentifier());
+      while (this.currentToken.type === 'Comma') {
+        this.eat('Comma');
+        params.push(this.parseIdentifier());
+      }
+    }
+    this.eat('RightParen');
+
+    const body = this.parseBlockStatement();
+
+    return {
+      type: 'MethodDefinition',
+      key,
+      kind,
+      params,
+      body,
+      accept(visitor: ast.Visitor) { visitor.MethodDefinition(this); }
+    } as ast.MethodDefinitionNode;
+  }
+
   private parseReturnStatement(): ast.ReturnStatementNode {
     this.eat('Return');
     let argument: ast.Node | null = null;
@@ -683,6 +746,10 @@ export class Parser {
         return this.parseBooleanLiteral();
       case 'First':
         return this.parseFirstExpression();
+      case 'This':
+        return this.parseThisExpression();
+      case 'New':
+        return this.parseNewExpression();
       case 'LeftParen': {
         this.eat('LeftParen');
         const expr = this.parseExpression();
@@ -710,6 +777,40 @@ export class Parser {
         visitor.UnaryExpression(this);
       }
     } as ast.UnaryExpressionNode;
+  }
+
+  private parseThisExpression(): ast.ThisExpressionNode {
+    this.eat('This');
+    return {
+      type: 'ThisExpression',
+      accept(visitor: ast.Visitor) { visitor.ThisExpression(this); }
+    } as ast.ThisExpressionNode;
+  }
+
+  private parseNewExpression(): ast.NewExpressionNode {
+    this.eat('New');
+    const callee = this.parseCallMemberExpression(); // Parses `MyClass` or `MyClass.Something`
+    
+    // Arguments are optional for `new`
+    let args: ast.Node[] = [];
+    if (this.currentToken.type === 'LeftParen') {
+        this.eat('LeftParen');
+        if (this.currentToken.type !== 'RightParen') {
+          args.push(this.parseExpression());
+          while (this.currentToken.type === 'Comma') {
+            this.eat('Comma');
+            args.push(this.parseExpression());
+          }
+        }
+        this.eat('RightParen');
+    }
+
+    return {
+        type: 'NewExpression',
+        callee,
+        arguments: args,
+        accept(visitor: ast.Visitor) { visitor.NewExpression(this); }
+    } as ast.NewExpressionNode;
   }
 
   private parseFirstExpression(): ast.FirstExpressionNode {

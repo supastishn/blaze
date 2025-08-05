@@ -7,14 +7,18 @@ import { oneDark } from '@codemirror/theme-one-dark'
 import './App.css'
 
 const initialCode = `
-function factorial(n) {
-  if (n == 0) {
-    return 1;
+class Greeter {
+  constructor(name) {
+    this.name = name;
   }
-  return n * factorial(n - 1);
+
+  greet() {
+    return "Hello, " + this.name;
+  }
 }
 
-console.log(factorial(5));
+let greeter = new Greeter("World");
+console.log(greeter.greet());
 `.trim();
 
 function App() {

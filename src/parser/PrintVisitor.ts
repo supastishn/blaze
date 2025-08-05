@@ -170,4 +170,31 @@ export class PrintVisitor implements ast.Visitor {
     node.property.accept(this);
     this.depth--;
   }
+
+  ClassDeclaration(node: ast.ClassDeclarationNode) {
+    console.log(`${'  '.repeat(this.depth)}ClassDeclaration: ${node.name.name}`);
+    this.depth++;
+    node.body.forEach(p => p.accept(this));
+    this.depth--;
+  }
+
+  MethodDefinition(node: ast.MethodDefinitionNode) {
+    console.log(`${'  '.repeat(this.depth)}MethodDefinition: ${node.key.name} (kind: ${node.kind})`);
+    this.depth++;
+    node.params.forEach(p => p.accept(this));
+    node.body.accept(this);
+    this.depth--;
+  }
+
+  ThisExpression(node: ast.ThisExpressionNode) {
+    console.log(`${'  '.repeat(this.depth)}ThisExpression`);
+  }
+
+  NewExpression(node: ast.NewExpressionNode) {
+    console.log(`${'  '.repeat(this.depth)}NewExpression:`);
+    this.depth++;
+    node.callee.accept(this);
+    node.arguments.forEach(arg => arg.accept(this));
+    this.depth--;
+  }
 }

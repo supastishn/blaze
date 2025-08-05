@@ -90,10 +90,40 @@ describe('Compiler', () => {
   });
 
   test('compiles object literals and access', () => {
-    const code = 'let obj = { "key": "value" }; console.log(obj.key);';
+    const code = 'let obj = { "key": "value" }; console.log(obj["key"]);';
     const cpp = compile(code);
     expect(cpp).toContain('auto obj = std::map<std::string, std::any>{{"key", std::string("value")}};');
-    expect(cpp).toContain('print_any(std::any_cast<std::map<std::string, std::any>&>(obj)["key"]);');
+    // Note: obj.key syntax is now assumed to be class property access.
+    // Map access must now use bracket notation.
+    expect(cpp).toContain('print_any(obj[std::string("key")]);');
+  });
+
+  test('compiles class declaration and instantiation', () => {
+    const code = `
+      class Counter {
+        constructor(initial) {
+          this.count = initial;
+        }
+
+        increment() {
+          this.count = this.count + 1;
+          return this.count;
+        }
+      }
+      let c = new Counter(0);
+      console.log(c.increment());
+      console.log(c.increment());
+    `;
+    const cpp = compile(code);
+    expect(cpp).toContain('struct Counter {');
+    expect(cpp).toContain('std::any count;');
+    expect(cpp).toContain('Counter(std::any initial)');
+    expect(cpp).toContain('this->count = initial;');
+    expect(cpp).toContain('std::any increment()');
+    expect(cpp).toContain('this->count = (this->count + 1);');
+    expect(cpp).toContain('return this->count;');
+    expect(cpp).toContain('auto c = std::make_shared<Counter>(0);');
+    expect(cpp).toContain('print_any(c->increment());');
   });
 
   test('reports compilation errors', () => {

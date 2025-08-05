@@ -22,6 +22,10 @@ export interface Visitor {
   ObjectExpression(node: ObjectExpressionNode): void;
   Property(node: PropertyNode): void;
   MemberExpression(node: MemberExpressionNode): void;
+  ClassDeclaration(node: ClassDeclarationNode): void;
+  MethodDefinition(node: MethodDefinitionNode): void;
+  ThisExpression(node: ThisExpressionNode): void;
+  NewExpression(node: NewExpressionNode): void;
 }
 
 // Add accept() methods to all node interfaces
@@ -36,7 +40,8 @@ export type Node = ProgramNode | IdentifierNode | NumericLiteralNode
     | IfStatementNode | WhileStatementNode | ForStatementNode | UnaryExpressionNode
     | FunctionDeclarationNode | ReturnStatementNode | CallExpressionNode | BooleanLiteralNode
     | StringLiteralNode | LogicalExpressionNode | ArrayExpressionNode | ObjectExpressionNode
-    | PropertyNode | MemberExpressionNode;
+    | PropertyNode | MemberExpressionNode | ClassDeclarationNode | MethodDefinitionNode
+    | ThisExpressionNode | NewExpressionNode;
 
 export interface ProgramNode extends NodeBase {
   type: 'Program';
@@ -173,6 +178,30 @@ export interface UnaryExpressionNode extends NodeBase {
   argument: Node;
 }
 
+export interface ClassDeclarationNode extends NodeBase {
+  type: 'ClassDeclaration';
+  name: IdentifierNode;
+  body: MethodDefinitionNode[];
+}
+
+export interface MethodDefinitionNode extends NodeBase {
+  type: 'MethodDefinition';
+  key: IdentifierNode;
+  kind: 'constructor' | 'method';
+  params: IdentifierNode[];
+  body: BlockStatementNode;
+}
+
+export interface ThisExpressionNode extends NodeBase {
+  type: 'ThisExpression';
+}
+
+export interface NewExpressionNode extends NodeBase {
+  type: 'NewExpression';
+  callee: Node;
+  arguments: Node[];
+}
+
 (ProgramNode.prototype as any).accept = function(visitor: Visitor) {
   visitor.Program(this);
   this.body.forEach((child: Node) => child.accept(visitor));
@@ -268,4 +297,20 @@ export interface UnaryExpressionNode extends NodeBase {
 
 (MemberExpressionNode.prototype as any).accept = function(visitor: Visitor) {
   visitor.MemberExpression(this);
+};
+
+(ClassDeclarationNode.prototype as any).accept = function(visitor: Visitor) {
+  visitor.ClassDeclaration(this);
+};
+
+(MethodDefinitionNode.prototype as any).accept = function(visitor: Visitor) {
+  visitor.MethodDefinition(this);
+};
+
+(ThisExpressionNode.prototype as any).accept = function(visitor: Visitor) {
+  visitor.ThisExpression(this);
+};
+
+(NewExpressionNode.prototype as any).accept = function(visitor: Visitor) {
+  visitor.NewExpression(this);
 };

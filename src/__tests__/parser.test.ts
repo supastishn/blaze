@@ -133,6 +133,25 @@ describe('Parser', () => {
     expect(stmt.expression.computed).toBe(true);
   });
 
+  test('parses class declaration', () => {
+    const ast = parse('class MyClass { constructor(a) { this.a = a; } method() {} }');
+    const stmt = ast.body[0] as any;
+    expect(stmt.type).toBe('ClassDeclaration');
+    expect(stmt.name.name).toBe('MyClass');
+    expect(stmt.body.length).toBe(2);
+    expect(stmt.body[0].type).toBe('MethodDefinition');
+    expect(stmt.body[0].kind).toBe('constructor');
+    expect(stmt.body[1].kind).toBe('method');
+  });
+
+  test('parses new expression', () => {
+    const ast = parse('new MyClass(1)');
+    const stmt = ast.body[0] as any;
+    expect(stmt.expression.type).toBe('NewExpression');
+    expect(stmt.expression.callee.name).toBe('MyClass');
+    expect(stmt.expression.arguments.length).toBe(1);
+  });
+
   test('visits nodes with PrintVisitor', () => {
     const ast = parse('let x = 5');
     const printVisitor = new PrintVisitor();
