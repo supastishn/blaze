@@ -611,9 +611,9 @@ export class Parser {
     
     this.eat('LeftParen');
     const params: ast.IdentifierNode[] = [];
-    if (this.currentToken.type !== 'RightParen') {
+    if ((this.currentToken.type as string) !== 'RightParen') {
       params.push(this.parseIdentifier());
-      while (this.currentToken.type === 'Comma') {
+      while ((this.currentToken.type as string) === 'Comma') {
         this.eat('Comma');
         params.push(this.parseIdentifier());
       }
@@ -684,9 +684,9 @@ export class Parser {
       if (tokenType === 'LeftParen') {
         this.eat('LeftParen');
         const args: ast.Node[] = [];
-        if (this.currentToken.type !== 'RightParen') {
+        if ((this.currentToken.type as string) !== 'RightParen') {
           args.push(this.parseExpression());
-          while (this.currentToken.type === 'Comma') {
+          while ((this.currentToken.type as string) === 'Comma') {
             this.eat('Comma');
             args.push(this.parseExpression());
           }
@@ -795,9 +795,9 @@ export class Parser {
     let args: ast.Node[] = [];
     if (this.currentToken.type === 'LeftParen') {
         this.eat('LeftParen');
-        if (this.currentToken.type !== 'RightParen') {
+        if ((this.currentToken.type as string) !== 'RightParen') {
           args.push(this.parseExpression());
-          while (this.currentToken.type === 'Comma') {
+          while ((this.currentToken.type as string) === 'Comma') {
             this.eat('Comma');
             args.push(this.parseExpression());
           }
@@ -872,9 +872,9 @@ export class Parser {
   private parseArrayExpression(): ast.ArrayExpressionNode {
     this.eat('LeftBracket');
     const elements: ast.Node[] = [];
-    if (this.currentToken.type !== 'RightBracket') {
+    if ((this.currentToken.type as string) !== 'RightBracket') {
       elements.push(this.parseExpression());
-      while (this.currentToken.type === 'Comma') {
+      while ((this.currentToken.type as string) === 'Comma') {
         this.eat('Comma');
         elements.push(this.parseExpression());
       }
@@ -890,9 +890,9 @@ export class Parser {
   private parseObjectExpression(): ast.ObjectExpressionNode {
     this.eat('LeftBrace');
     const properties: ast.PropertyNode[] = [];
-    if (this.currentToken.type !== 'RightBrace') {
+    if ((this.currentToken.type as string) !== 'RightBrace') {
       properties.push(this.parseProperty());
-      while(this.currentToken.type === 'Comma') {
+      while((this.currentToken.type as string) === 'Comma') {
         this.eat('Comma');
         properties.push(this.parseProperty());
       }
