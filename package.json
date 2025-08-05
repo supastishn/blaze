@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc",
     "test": "jest",
-    "dev": "node --no-warnings -r ts-node/register src/cli/index.ts"
+    "dev": "node --no-warnings -r ts-node/register src/cli/index.ts",
+    "package": "pkg ."
   },
   "bin": {
     "ts2cpp": "dist/cli/index.js"
@@ -15,11 +16,19 @@
     "@types/jest": "^29.5.12",
     "@types/node": "^20.14.0",
     "jest": "^29.7.0",
+    "pkg": "^5.8.1",
     "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5"
   },
   "dependencies": {
     "commander": "^12.1.0"
+  },
+  "pkg": {
+    "targets": [
+      "node18-linux-x64",
+      "node18-linux-arm64"
+    ],
+    "outputPath": "dist-bin"
   }
 }
