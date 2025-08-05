@@ -1,33 +1,45 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { compile } from '../../../src/compiler'
 import './App.css'
 
+const initialCode = `
+function factorial(n) {
+  if (n == 0) {
+    return 1;
+  }
+  return n * factorial(n - 1);
+}
+
+print(factorial(5));
+`.trim();
+
 function App() {
-  const [count, setCount] = useState(0)
+  const [tsCode, setTsCode] = useState(initialCode);
+  const [cppCode, setCppCode] = useState('');
+
+  const handleCompile = () => {
+    const result = compile(tsCode);
+    setCppCode(result);
+  };
 
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+      <h1>ts2cpp</h1>
+      <div className="container">
+        <div className="editor">
+          <h2>TypeScript Input</h2>
+          <textarea
+            value={tsCode}
+            onChange={(e) => setTsCode(e.target.value)}
+            spellCheck="false"
+          />
+        </div>
+        <div className="output">
+          <h2>C++ Output</h2>
+          <pre><code>{cppCode}</code></pre>
+        </div>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      <button onClick={handleCompile}>Compile</button>
     </>
   )
 }
