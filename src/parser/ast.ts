@@ -28,10 +28,9 @@ export interface Visitor {
   NewExpression(node: NewExpressionNode): void;
 }
 
-// Add accept() methods to all node interfaces
-export interface NodeBase {
-  type: string;
-  accept(visitor: Visitor): void;
+export abstract class NodeBase {
+  abstract type: string;
+  abstract accept(visitor: Visitor): void;
 }
 
 export type Node = ProgramNode | IdentifierNode | NumericLiteralNode
@@ -43,274 +42,430 @@ export type Node = ProgramNode | IdentifierNode | NumericLiteralNode
     | PropertyNode | MemberExpressionNode | ClassDeclarationNode | MethodDefinitionNode
     | ThisExpressionNode | NewExpressionNode;
 
-export interface ProgramNode extends NodeBase {
-  type: 'Program';
+export class ProgramNode extends NodeBase {
+  type: 'Program' = 'Program';
   body: Node[];
+
+  constructor(body: Node[]) {
+    super();
+    this.body = body;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.Program(this);
+    this.body.forEach((child: Node) => child.accept(visitor));
+  }
 }
 
-export interface IdentifierNode extends NodeBase {
-  type: 'Identifier';
+export class IdentifierNode extends NodeBase {
+  type: 'Identifier' = 'Identifier';
   name: string;
+
+  constructor(name: string) {
+    super();
+    this.name = name;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.Identifier(this);
+  }
 }
 
-export interface NumericLiteralNode extends NodeBase {
-  type: 'NumericLiteral';
+export class NumericLiteralNode extends NodeBase {
+  type: 'NumericLiteral' = 'NumericLiteral';
   value: number;
+
+  constructor(value: number) {
+    super();
+    this.value = value;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.NumericLiteral(this);
+  }
 }
 
-export interface StringLiteralNode extends NodeBase {
-  type: 'StringLiteral';
+export class StringLiteralNode extends NodeBase {
+  type: 'StringLiteral' = 'StringLiteral';
   value: string;
+
+  constructor(value: string) {
+    super();
+    this.value = value;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.StringLiteral(this);
+  }
 }
 
-export interface BooleanLiteralNode extends NodeBase {
-  type: 'BooleanLiteral';
+export class BooleanLiteralNode extends NodeBase {
+  type: 'BooleanLiteral' = 'BooleanLiteral';
   value: boolean;
+
+  constructor(value: boolean) {
+    super();
+    this.value = value;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.BooleanLiteral(this);
+  }
 }
 
-export interface AssignmentExpressionNode extends NodeBase {
-  type: 'AssignmentExpression';
+export class AssignmentExpressionNode extends NodeBase {
+  type: 'AssignmentExpression' = 'AssignmentExpression';
   left: Node; // Can be Identifier or MemberExpression
   right: Node;
+
+  constructor(left: Node, right: Node) {
+    super();
+    this.left = left;
+    this.right = right;
+  }
+
+  accept(visitor: Visitor) {
+    this.left.accept(visitor);
+    this.right.accept(visitor);
+    visitor.AssignmentExpression(this);
+  }
 }
 
-export interface CallExpressionNode extends NodeBase {
-  type: 'CallExpression';
+export class CallExpressionNode extends NodeBase {
+  type: 'CallExpression' = 'CallExpression';
   callee: Node;
   arguments: Node[];
+
+  constructor(callee: Node, args: Node[]) {
+    super();
+    this.callee = callee;
+    this.arguments = args;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.CallExpression(this);
+  }
 }
 
-export interface ExpressionStatementNode extends NodeBase {
-  type: 'ExpressionStatement';
+export class ExpressionStatementNode extends NodeBase {
+  type: 'ExpressionStatement' = 'ExpressionStatement';
   expression: Node;
+
+  constructor(expression: Node) {
+    super();
+    this.expression = expression;
+  }
+
+  accept(visitor: Visitor) {
+    this.expression.accept(visitor);
+    visitor.ExpressionStatement(this);
+  }
 }
 
-export interface FirstExpressionNode extends NodeBase {
-  type: 'FirstExpression';
+export class FirstExpressionNode extends NodeBase {
+  type: 'FirstExpression' = 'FirstExpression';
   argument: Node;
+
+  constructor(argument: Node) {
+    super();
+    this.argument = argument;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.FirstExpression(this);
+  }
 }
 
-export interface BinaryExpressionNode extends NodeBase {
-  type: 'BinaryExpression';
+export class BinaryExpressionNode extends NodeBase {
+  type: 'BinaryExpression' = 'BinaryExpression';
   operator: string;
   left: Node;
   right: Node;
+
+  constructor(operator: string, left: Node, right: Node) {
+    super();
+    this.operator = operator;
+    this.left = left;
+    this.right = right;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.BinaryExpression(this);
+  }
 }
 
-export interface LogicalExpressionNode extends NodeBase {
-  type: 'LogicalExpression';
+export class LogicalExpressionNode extends NodeBase {
+  type: 'LogicalExpression' = 'LogicalExpression';
   operator: string;
   left: Node;
   right: Node;
+
+  constructor(operator: string, left: Node, right: Node) {
+    super();
+    this.operator = operator;
+    this.left = left;
+    this.right = right;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.LogicalExpression(this);
+  }
 }
 
-export interface ArrayExpressionNode extends NodeBase {
-  type: 'ArrayExpression';
-  elements: Node[];
-}
-
-export interface MemberExpressionNode extends NodeBase {
-  type: 'MemberExpression';
-  object: Node;
-  property: Node;
-  computed: boolean; // true for foo[bar], false for foo.bar
-}
-
-export interface ObjectExpressionNode extends NodeBase {
-  type: 'ObjectExpression';
-  properties: PropertyNode[];
-}
-
-export interface PropertyNode extends NodeBase {
-  type: 'Property';
-  key: IdentifierNode | StringLiteralNode;
-  value: Node;
-  accept(visitor: Visitor): void;
-}
-
-export interface VariableDeclarationNode extends NodeBase {
-  type: 'VariableDeclaration';
+export class VariableDeclarationNode extends NodeBase {
+  type: 'VariableDeclaration' = 'VariableDeclaration';
   identifier: IdentifierNode;
   initializer: Node | null;
+
+  constructor(identifier: IdentifierNode, initializer: Node | null) {
+    super();
+    this.identifier = identifier;
+    this.initializer = initializer;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.VariableDeclaration(this);
+  }
 }
 
-export interface FunctionDeclarationNode extends NodeBase {
-  type: 'FunctionDeclaration';
+export class FunctionDeclarationNode extends NodeBase {
+  type: 'FunctionDeclaration' = 'FunctionDeclaration';
   name: IdentifierNode;
   params: IdentifierNode[];
   body: BlockStatementNode;
+
+  constructor(name: IdentifierNode, params: IdentifierNode[], body: BlockStatementNode) {
+    super();
+    this.name = name;
+    this.params = params;
+    this.body = body;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.FunctionDeclaration(this);
+  }
 }
 
-export interface ReturnStatementNode extends NodeBase {
-  type: 'ReturnStatement';
+export class ReturnStatementNode extends NodeBase {
+  type: 'ReturnStatement' = 'ReturnStatement';
   argument: Node | null;
+
+  constructor(argument: Node | null) {
+    super();
+    this.argument = argument;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.ReturnStatement(this);
+  }
 }
 
-export interface BlockStatementNode extends NodeBase {
-  type: 'BlockStatement';
+export class BlockStatementNode extends NodeBase {
+  type: 'BlockStatement' = 'BlockStatement';
   body: Node[];
+
+  constructor(body: Node[]) {
+    super();
+    this.body = body;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.BlockStatement(this);
+  }
 }
 
-export interface IfStatementNode extends NodeBase {
-  type: 'IfStatement';
+export class IfStatementNode extends NodeBase {
+  type: 'IfStatement' = 'IfStatement';
   test: Node;
   consequent: BlockStatementNode;
   alternate: IfStatementNode | BlockStatementNode | null;
+
+  constructor(test: Node, consequent: BlockStatementNode, alternate: IfStatementNode | BlockStatementNode | null) {
+    super();
+    this.test = test;
+    this.consequent = consequent;
+    this.alternate = alternate;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.IfStatement(this);
+  }
 }
 
-export interface WhileStatementNode extends NodeBase {
-  type: 'WhileStatement';
+export class WhileStatementNode extends NodeBase {
+  type: 'WhileStatement' = 'WhileStatement';
   test: Node;
   body: BlockStatementNode;
+
+  constructor(test: Node, body: BlockStatementNode) {
+    super();
+    this.test = test;
+    this.body = body;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.WhileStatement(this);
+  }
 }
 
-export interface ForStatementNode extends NodeBase {
-  type: 'ForStatement';
+export class ForStatementNode extends NodeBase {
+  type: 'ForStatement' = 'ForStatement';
   init: Node | null;
   test: Node | null;
   update: Node | null;
   body: BlockStatementNode;
+
+  constructor(init: Node | null, test: Node | null, update: Node | null, body: BlockStatementNode) {
+    super();
+    this.init = init;
+    this.test = test;
+    this.update = update;
+    this.body = body;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.ForStatement(this);
+  }
 }
 
-export interface UnaryExpressionNode extends NodeBase {
-  type: 'UnaryExpression';
+export class UnaryExpressionNode extends NodeBase {
+  type: 'UnaryExpression' = 'UnaryExpression';
   operator: string;
   argument: Node;
+
+  constructor(operator: string, argument: Node) {
+    super();
+    this.operator = operator;
+    this.argument = argument;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.UnaryExpression(this);
+  }
 }
 
-export interface ClassDeclarationNode extends NodeBase {
-  type: 'ClassDeclaration';
+export class ArrayExpressionNode extends NodeBase {
+  type: 'ArrayExpression' = 'ArrayExpression';
+  elements: Node[];
+
+  constructor(elements: Node[]) {
+    super();
+    this.elements = elements;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.ArrayExpression(this);
+  }
+}
+
+export class MemberExpressionNode extends NodeBase {
+  type: 'MemberExpression' = 'MemberExpression';
+  object: Node;
+  property: Node;
+  computed: boolean; // true for foo[bar], false for foo.bar
+
+  constructor(object: Node, property: Node, computed: boolean) {
+    super();
+    this.object = object;
+    this.property = property;
+    this.computed = computed;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.MemberExpression(this);
+  }
+}
+
+export class ObjectExpressionNode extends NodeBase {
+  type: 'ObjectExpression' = 'ObjectExpression';
+  properties: PropertyNode[];
+
+  constructor(properties: PropertyNode[]) {
+    super();
+    this.properties = properties;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.ObjectExpression(this);
+  }
+}
+
+export class PropertyNode extends NodeBase {
+  type: 'Property' = 'Property';
+  key: IdentifierNode | StringLiteralNode;
+  value: Node;
+
+  constructor(key: IdentifierNode | StringLiteralNode, value: Node) {
+    super();
+    this.key = key;
+    this.value = value;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.Property(this);
+  }
+}
+
+export class ClassDeclarationNode extends NodeBase {
+  type: 'ClassDeclaration' = 'ClassDeclaration';
   name: IdentifierNode;
   body: MethodDefinitionNode[];
+
+  constructor(name: IdentifierNode, body: MethodDefinitionNode[]) {
+    super();
+    this.name = name;
+    this.body = body;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.ClassDeclaration(this);
+  }
 }
 
-export interface MethodDefinitionNode extends NodeBase {
-  type: 'MethodDefinition';
+export class MethodDefinitionNode extends NodeBase {
+  type: 'MethodDefinition' = 'MethodDefinition';
   key: IdentifierNode;
   kind: 'constructor' | 'method';
   params: IdentifierNode[];
   body: BlockStatementNode;
+
+  constructor(key: IdentifierNode, kind: 'constructor' | 'method', params: IdentifierNode[], body: BlockStatementNode) {
+    super();
+    this.key = key;
+    this.kind = kind;
+    this.params = params;
+    this.body = body;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.MethodDefinition(this);
+  }
 }
 
-export interface ThisExpressionNode extends NodeBase {
-  type: 'ThisExpression';
+export class ThisExpressionNode extends NodeBase {
+  type: 'ThisExpression' = 'ThisExpression';
+
+  constructor() {
+    super();
+  }
+
+  accept(visitor: Visitor) {
+    visitor.ThisExpression(this);
+  }
 }
 
-export interface NewExpressionNode extends NodeBase {
-  type: 'NewExpression';
+export class NewExpressionNode extends NodeBase {
+  type: 'NewExpression' = 'NewExpression';
   callee: Node;
   arguments: Node[];
+
+  constructor(callee: Node, args: Node[]) {
+    super();
+    this.callee = callee;
+    this.arguments = args;
+  }
+
+  accept(visitor: Visitor) {
+    visitor.NewExpression(this);
+  }
 }
-
-(ProgramNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.Program(this);
-  this.body.forEach((child: Node) => child.accept(visitor));
-};
-
-(IdentifierNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.Identifier(this);
-};
-
-(NumericLiteralNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.NumericLiteral(this);
-};
-
-(AssignmentExpressionNode.prototype as any).accept = function(visitor: Visitor) {
-  this.left.accept(visitor);
-  this.right.accept(visitor);
-  visitor.AssignmentExpression(this);
-};
-
-(ExpressionStatementNode.prototype as any).accept = function(visitor: Visitor) {
-  this.expression.accept(visitor);
-  visitor.ExpressionStatement(this);
-};
-
-(FirstExpressionNode.prototype as any).accept = 
-    function(visitor: Visitor) {
-  visitor.FirstExpression(this);
-};
-
-(BinaryExpressionNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.BinaryExpression(this);
-};
-
-(VariableDeclarationNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.VariableDeclaration(this);
-};
-
-(BlockStatementNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.BlockStatement(this);
-};
-
-(IfStatementNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.IfStatement(this);
-};
-
-(WhileStatementNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.WhileStatement(this);
-};
-
-(ForStatementNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.ForStatement(this);
-};
-
-(UnaryExpressionNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.UnaryExpression(this);
-};
-
-(FunctionDeclarationNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.FunctionDeclaration(this);
-};
-
-(ReturnStatementNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.ReturnStatement(this);
-};
-
-(CallExpressionNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.CallExpression(this);
-};
-
-(BooleanLiteralNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.BooleanLiteral(this);
-};
-
-(StringLiteralNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.StringLiteral(this);
-};
-
-(LogicalExpressionNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.LogicalExpression(this);
-};
-
-(ArrayExpressionNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.ArrayExpression(this);
-};
-
-(ObjectExpressionNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.ObjectExpression(this);
-};
-
-(PropertyNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.Property(this);
-};
-
-(MemberExpressionNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.MemberExpression(this);
-};
-
-(ClassDeclarationNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.ClassDeclaration(this);
-};
-
-(MethodDefinitionNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.MethodDefinition(this);
-};
-
-(ThisExpressionNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.ThisExpression(this);
-};
-
-(NewExpressionNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.NewExpression(this);
-};
