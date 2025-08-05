@@ -14,7 +14,7 @@ function factorial(n) {
   return n * factorial(n - 1);
 }
 
-print(factorial(5));
+console.log(factorial(5));
 `.trim();
 
 function App() {

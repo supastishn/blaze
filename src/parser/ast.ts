@@ -7,7 +7,6 @@ export interface Visitor {
   FirstExpression(node: FirstExpressionNode): void;
   BinaryExpression(node: BinaryExpressionNode): void;
   VariableDeclaration(node: VariableDeclarationNode): void;
-  PrintStatement(node: PrintStatementNode): void;
   BlockStatement(node: BlockStatementNode): void;
   IfStatement(node: IfStatementNode): void;
   WhileStatement(node: WhileStatementNode): void;
@@ -33,7 +32,7 @@ export interface NodeBase {
 
 export type Node = ProgramNode | IdentifierNode | NumericLiteralNode
     | AssignmentExpressionNode | ExpressionStatementNode | FirstExpressionNode
-    | BinaryExpressionNode | VariableDeclarationNode | PrintStatementNode | BlockStatementNode
+    | BinaryExpressionNode | VariableDeclarationNode | BlockStatementNode
     | IfStatementNode | WhileStatementNode | ForStatementNode | UnaryExpressionNode
     | FunctionDeclarationNode | ReturnStatementNode | CallExpressionNode | BooleanLiteralNode
     | StringLiteralNode | LogicalExpressionNode | ArrayExpressionNode | ObjectExpressionNode
@@ -142,11 +141,6 @@ export interface ReturnStatementNode extends NodeBase {
   argument: Node | null;
 }
 
-export interface PrintStatementNode extends NodeBase {
-  type: 'PrintStatement';
-  expression: Node;
-}
-
 export interface BlockStatementNode extends NodeBase {
   type: 'BlockStatement';
   body: Node[];
@@ -214,10 +208,6 @@ export interface UnaryExpressionNode extends NodeBase {
 
 (VariableDeclarationNode.prototype as any).accept = function(visitor: Visitor) {
   visitor.VariableDeclaration(this);
-};
-
-(PrintStatementNode.prototype as any).accept = function(visitor: Visitor) {
-  visitor.PrintStatement(this);
 };
 
 (BlockStatementNode.prototype as any).accept = function(visitor: Visitor) {

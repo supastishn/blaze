@@ -20,7 +20,6 @@ export const TokenType = {
   LeftBracket: '[',
   RightBracket: ']',
   Let: 'let',
-  Print: 'print',
   If: 'if',
   Else: 'else',
   True: 'true',
@@ -238,9 +237,6 @@ export class Lexer {
     if (value === 'return') {
       return { type: 'Return', value: 'return', line: startLine, column: startCol };
     }
-    if (value === 'print') {
-      return { type: 'Print', value: 'print', line: startLine, column: startCol };
-    }
     return { type: 'Identifier', value, line: startLine, column: startCol };
   }
 
@@ -324,8 +320,6 @@ export class Parser {
     let stmt: ast.Node;
     if (this.currentToken.type === 'Let') {
       stmt = this.parseVariableDeclaration();
-    } else if (this.currentToken.type === 'Print') {
-      stmt = this.parsePrintStatement();
     } else if (this.currentToken.type === 'LeftBrace') {
       stmt = this.parseBlockStatement();
     } else if (this.currentToken.type === 'If') {
@@ -438,18 +432,6 @@ export class Parser {
         visitor.VariableDeclaration(this);
       }
     } as ast.VariableDeclarationNode;
-  }
-
-  private parsePrintStatement(): ast.PrintStatementNode {
-    this.eat('Print');
-    const expression = this.parseExpression();
-    return {
-      type: 'PrintStatement',
-      expression,
-      accept(visitor: ast.Visitor) {
-        visitor.PrintStatement(this);
-      }
-    } as ast.PrintStatementNode;
   }
 
   private parseBlockStatement(): ast.BlockStatementNode {

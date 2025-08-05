@@ -143,12 +143,6 @@ export class CppCodegenVisitor implements ast.Visitor {
     }
   }
 
-  PrintStatement(node: ast.PrintStatementNode) {
-    const exprValue = this.genExpression(node.expression);
-    this.emit(`print_any(${exprValue});`);
-    this.emit(`std::cout << std::endl;`);
-  }
-
   BlockStatement(node: ast.BlockStatementNode) {
     this.emit('{');
     this.indentLevel++;
@@ -196,6 +190,29 @@ export class CppCodegenVisitor implements ast.Visitor {
   }
 
   ExpressionStatement(node: ast.ExpressionStatementNode) {
+    if (node.expression.type === 'CallExpression') {
+      const callNode = node.expression as ast.CallExpressionNode;
+      if (
+        callNode.callee.type === 'MemberExpression' &&
+        (callNode.callee as ast.MemberExpressionNode).object.type === 'Identifier' &&
+        ((callNode.callee as ast.MemberExpressionNode).object as ast.IdentifierNode).name === 'console' &&
+        (callNode.callee as ast.MemberExpressionNode).property.type === 'Identifier' &&
+        ((callNode.callee as ast.MemberExpressionNode).property as ast.IdentifierNode).name === 'log'
+      ) {
+        const args = callNode.arguments;
+        if (args.length > 0) {
+          for (let i = 0; i < args.length; i++) {
+            const arg = args[i];
+            this.emit(`print_any(${this.genExpression(arg)});`);
+            if (i < args.length - 1) {
+              this.emit(`std::cout << " ";`);
+            }
+          }
+        }
+        this.emit(`std::cout << std::endl;`);
+        return;
+      }
+    }
     const code = this.genExpression(node.expression);
     this.emit(`${code};`);
   }

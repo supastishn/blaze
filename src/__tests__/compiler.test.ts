@@ -13,21 +13,21 @@ describe('Compiler', () => {
     expect(cpp).toContain('auto x = 5;');
   });
 
-  test('compiles print statement', () => {
-    const code = 'print(42);';
+  test('compiles console.log statement', () => {
+    const code = 'console.log(42);';
     const cpp = compile(code);
     expect(cpp).toContain('print_any(42);');
   });
 
   test('compiles if statement', () => {
-    const code = 'let x = 1; if (x > 0) { print(1); }';
+    const code = 'let x = 1; if (x > 0) { console.log(1); }';
     const cpp = compile(code);
     expect(cpp).toContain('if ((x > 0))');
     expect(cpp).toContain('print_any(1);');
   });
 
   test('compiles if-else statement', () => {
-    const code = 'let x = 0; if (x > 0) { print(1); } else { print(0); }';
+    const code = 'let x = 0; if (x > 0) { console.log(1); } else { console.log(0); }';
     const cpp = compile(code);
     expect(cpp).toContain('if ((x > 0))');
     expect(cpp).toContain('else');
@@ -42,7 +42,7 @@ describe('Compiler', () => {
   });
 
   test('compiles for statement', () => {
-    const code = 'for (let i = 0; i < 5; i = i + 1) { print(i); }';
+    const code = 'for (let i = 0; i < 5; i = i + 1) { console.log(i); }';
     const cpp = compile(code);
     expect(cpp).toContain('for (int i = 0; (i < 5); i = (i + 1))');
     expect(cpp).toContain('print_any(i);');
@@ -60,7 +60,7 @@ describe('Compiler', () => {
         return a + b;
       }
       let result = add(3, 4);
-      print(result);
+      console.log(result);
     `;
     const cpp = compile(code);
     expect(cpp).toContain('int add(int a, int b)');
@@ -83,14 +83,14 @@ describe('Compiler', () => {
   });
 
   test('compiles array literals and access', () => {
-    const code = 'let arr = [1, "a"]; print(arr[0]);';
+    const code = 'let arr = [1, "a"]; console.log(arr[0]);';
     const cpp = compile(code);
     expect(cpp).toContain('auto arr = std::vector<std::any>{1, std::string("a")};');
     expect(cpp).toContain('print_any(arr[0]);');
   });
 
   test('compiles object literals and access', () => {
-    const code = 'let obj = { "key": "value" }; print(obj.key);';
+    const code = 'let obj = { "key": "value" }; console.log(obj.key);';
     const cpp = compile(code);
     expect(cpp).toContain('auto obj = std::map<std::string, std::any>{{"key", std::string("value")}};');
     expect(cpp).toContain('print_any(std::any_cast<std::map<std::string, std::any>&>(obj)["key"]);');
@@ -99,6 +99,6 @@ describe('Compiler', () => {
   test('reports compilation errors', () => {
     const code = 'let x = ;';
     const cpp = compile(code);
-    expect(cpp).toContain('Compilation error');
+    expect(cpp).toContain('COMPILE ERROR: ');
   });
 });

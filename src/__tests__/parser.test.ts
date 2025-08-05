@@ -19,23 +19,18 @@ describe('Parser', () => {
     expect((ast.body[0] as any).expression.type).toBe('AssignmentExpression');
   });
 
-  test('parses print statement', () => {
-    const ast = parse('print(42)');
-    expect(ast.body[0].type).toBe('PrintStatement');
-  });
-
   test('parses block statement', () => {
-    const ast = parse('{ print(42); }');
+    const ast = parse('{ console.log(42); }');
     expect(ast.body[0].type).toBe('BlockStatement');
   });
 
   test('parses if statement', () => {
-    const ast = parse('if (x > 0) { print(1); }');
+    const ast = parse('if (x > 0) { console.log(1); }');
     expect(ast.body[0].type).toBe('IfStatement');
   });
 
   test('parses if-else statement', () => {
-    const ast = parse('if (x > 0) { print(1); } else { print(0); }');
+    const ast = parse('if (x > 0) { console.log(1); } else { console.log(0); }');
     const stmt = ast.body[0] as any;
     expect(stmt.type).toBe('IfStatement');
     expect(stmt.alternate).not.toBeNull();
@@ -48,7 +43,7 @@ describe('Parser', () => {
   });
 
   test('parses for statement', () => {
-    const ast = parse('for (let i = 0; i < 10; i = i + 1) { print(i); }');
+    const ast = parse('for (let i = 0; i < 10; i = i + 1) { console.log(i); }');
     const stmt = ast.body[0] as any;
     expect(stmt.type).toBe('ForStatement');
     expect(stmt.init.type).toBe('VariableDeclaration');

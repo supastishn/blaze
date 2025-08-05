@@ -57,13 +57,6 @@ export class PrintVisitor implements ast.Visitor {
     }
   }
 
-  PrintStatement(node: ast.PrintStatementNode) {
-    console.log(`${'  '.repeat(this.depth)}PrintStatement:`);
-    this.depth++;
-    node.expression.accept(this);
-    this.depth--;
-  }
-
   BlockStatement(node: ast.BlockStatementNode) {
     console.log(`${'  '.repeat(this.depth)}BlockStatement [${node.body.length} statements]`);
     this.depth++;

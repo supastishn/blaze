@@ -12,6 +12,6 @@ export const compile = (source: string): string => {
     ast.accept(codegen);
     return codegen.getCode();
   } catch (error: any) {
-    return `// Compilation error\n// ${error.message}`;
+    return `// COMPILE ERROR: ${error.message}`;
   }
 };
