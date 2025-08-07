@@ -7,7 +7,7 @@
     "build": "tsc",
     "test": "jest",
     "dev": "node --no-warnings -r ts-node/register src/cli/index.ts",
-    "package": "pkg ."
+    "package": "npm run build && pkg ."
   },
   "bin": {
     "ts2cpp": "dist/cli/index.js"
