@@ -35,7 +35,7 @@ fs.chmodSync(executablePath, '755');
 console.log('Injecting blob into executable...');
 // The sentinel fuse is a hash that ensures the blob is not tampered with.
 // This is a standard one provided in node docs.
-execSync(`npx postject ${executablePath} NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc4_67b6e072b8b5df1996b2`, { stdio: 'inherit' });
+execSync(`npx postject ${executablePath} NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2`, { stdio: 'inherit' });
 
 // On Linux, strip the binary to reduce size and fix potential execution issues.
 if (targetPlatform.startsWith('linux')) {
