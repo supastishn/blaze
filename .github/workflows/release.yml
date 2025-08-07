@@ -7,11 +7,25 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
-    name: Build Binaries
-    runs-on: ubuntu-latest
-
+    name: Build for ${{ matrix.name }}
+    strategy:
+      matrix:
+        include:
+          - name: linux-x64
+            os: ubuntu-latest
+            arch: x64
+          - name: linux-arm64
+            os: ubuntu-latest
+            arch: arm64
+          - name: windows-x64
+            os: windows-latest
+            arch: x64
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -20,6 +34,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          architecture: ${{ matrix.arch }}
 
       - name: Install dependencies
         run: npm install
@@ -27,19 +42,31 @@ jobs:
       - name: Build from TypeScript
         run: npm run build
 
-      - name: Package application for Linux
+      - name: Package application
         run: npm run package
+        env:
+          TARGET_PLATFORM: ${{ matrix.name }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ts2cpp-binary-linux-x64
-          path: dist-sea/ts2cpp-linux-x64
+          name: ts2cpp-binary-${{ matrix.name }}
+          path: dist-sea/
+
+  release:
+    name: Create Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
 
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
-        if: startsWith(github.ref, 'refs/tags/v')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -50,11 +77,30 @@ jobs:
 
       - name: Upload Linux x64 binary
         uses: actions/upload-release-asset@v1
-        if: startsWith(github.ref, 'refs/tags/v')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist-sea/ts2cpp-linux-x64
+          asset_path: ./artifacts/ts2cpp-binary-linux-x64/ts2cpp-linux-x64
           asset_name: ts2cpp-linux-x64
+          asset_content_type: application/octet-stream
+
+      - name: Upload Linux arm64 binary
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./artifacts/ts2cpp-binary-linux-arm64/ts2cpp-linux-arm64
+          asset_name: ts2cpp-linux-arm64
+          asset_content_type: application/octet-stream
+
+      - name: Upload Windows x64 binary
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./artifacts/ts2cpp-binary-windows-x64/ts2cpp-windows-x64.exe
+          asset_name: ts2cpp-windows-x64.exe
           asset_content_type: application/octet-stream

@@ -4,7 +4,8 @@ const path = require('path');
 
 const mainScript = path.join(__dirname, '..', 'dist', 'cli', 'index.js');
 const outputDir = path.join(__dirname, '..', 'dist-sea');
-const executableName = 'ts2cpp-linux-x64';
+const targetPlatform = process.env.TARGET_PLATFORM || `${process.platform}-${process.arch}`;
+const executableName = `ts2cpp-${targetPlatform}${targetPlatform.startsWith('win') ? '.exe' : ''}`;
 const executablePath = path.join(outputDir, executableName);
 const seaConfigPath = path.join(__dirname, '..', 'sea-config.json');
 
