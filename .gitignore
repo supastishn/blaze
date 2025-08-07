@@ -4,6 +4,11 @@ node_modules/
 # Build outputs
 dist/
 dist-bin/
+dist-sea/
+
+# SEA build artifacts
+sea-prep.blob
+sea-config.json
 
 # Logs
 logs
