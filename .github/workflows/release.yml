@@ -22,6 +22,9 @@ jobs:
           - name: linux-arm64
             os: ubuntu-latest
             arch: arm64
+          - name: linux-arm64-termux
+            os: ubuntu-latest
+            arch: arm64
           - name: windows-x64
             os: windows-latest
             arch: x64
@@ -43,7 +46,7 @@ jobs:
         run: npm run build
 
       - name: Install patchelf (for ARM64 Termux build)
-        if: matrix.name == 'linux-arm64'
+        if: matrix.name == 'linux-arm64-termux'
         run: sudo apt-get update && sudo apt-get install -y patchelf
 
       - name: Package application
@@ -97,6 +100,16 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./artifacts/ts2cpp-binary-linux-arm64/ts2cpp-linux-arm64
           asset_name: ts2cpp-linux-arm64
+          asset_content_type: application/octet-stream
+
+      - name: Upload Linux arm64 (Termux) binary
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./artifacts/ts2cpp-binary-linux-arm64-termux/ts2cpp-linux-arm64-termux
+          asset_name: ts2cpp-linux-arm64-termux
           asset_content_type: application/octet-stream
 
       - name: Upload Windows x64 binary

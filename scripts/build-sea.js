@@ -43,9 +43,9 @@ if (targetPlatform.startsWith('linux')) {
     execSync(`strip ${executablePath}`, { stdio: 'inherit' });
 }
 
-// For linux-arm64 builds, patch the interpreter for Termux.
+// For linux-arm64-termux builds, patch the interpreter for Termux.
 // This is expected to run in CI, where patchelf is installed.
-if (targetPlatform === 'linux-arm64') {
+if (targetPlatform === 'linux-arm64-termux') {
     try {
         console.log('Patching ARM64 binary for Termux...');
         const interpreter = '/data/data/com.termux/files/usr/lib/ld-linux-aarch64.so.1';
