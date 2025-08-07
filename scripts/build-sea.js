@@ -43,6 +43,18 @@ if (targetPlatform.startsWith('linux')) {
     execSync(`strip ${executablePath}`, { stdio: 'inherit' });
 }
 
+// For linux-arm64 builds, patch the interpreter for Termux.
+// This is expected to run in CI, where patchelf is installed.
+if (targetPlatform === 'linux-arm64') {
+    try {
+        console.log('Patching ARM64 binary for Termux...');
+        const interpreter = '/data/data/com.termux/files/usr/lib/ld-linux-aarch64.so.1';
+        execSync(`patchelf --set-interpreter ${interpreter} ${executablePath}`, { stdio: 'inherit' });
+    } catch (error) {
+        console.warn('Could not patch executable. This is expected if patchelf is not installed.');
+    }
+}
+
 // 6. Clean up temporary files
 console.log('Cleaning up...');
 fs.unlinkSync(seaConfigPath);

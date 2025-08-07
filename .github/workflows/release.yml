@@ -42,16 +42,14 @@ jobs:
       - name: Build from TypeScript
         run: npm run build
 
+      - name: Install patchelf (for ARM64 Termux build)
+        if: matrix.name == 'linux-arm64'
+        run: sudo apt-get update && sudo apt-get install -y patchelf
+
       - name: Package application
         run: npm run package
         env:
           TARGET_PLATFORM: ${{ matrix.name }}
-
-      - name: Patch ARM64 binary for Termux
-        if: matrix.name == 'linux-arm64'
-        run: |
-          sudo apt-get update && sudo apt-get install -y patchelf
-          patchelf --set-interpreter /data/data/com.termux/files/usr/lib/ld-linux-aarch64.so.1 dist-sea/ts2cpp-linux-arm64
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
