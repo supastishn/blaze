@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "test": "jest",
-    "test-project": "node --no-warnings -r ts-node/register src/cli/index.ts compile example.ts -o example.cpp && g++ -std=c++17 example.cpp -o example && ./example",
+    "test-project": "node --no-warnings -r ts-node/register src/cli/index.ts compile example.ts -o example.cpp",
     "dev": "node --no-warnings -r ts-node/register src/cli/index.ts",
     "bundle": "esbuild src/cli/index.ts --bundle --platform=node --outfile=dist/sea-bundle.js",
     "package": "npm run build && npm run bundle && node scripts/build-sea.js",

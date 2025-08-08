@@ -64,9 +64,11 @@ export class CppCodegenVisitor implements ast.Visitor {
     this.emit('int main() {');
     this.indentLevel++;
     this.declaredVars.clear(); // Reset for main scope
-    mainStatements.forEach(stmt => {
-      stmt.accept(this);
-    });
+    if (mainStatements.length > 0) {
+      mainStatements.forEach(stmt => {
+        stmt.accept(this);
+      });
+    }
     this.emit('return 0;');
     this.indentLevel--;
     this.emit('}');
