@@ -6,6 +6,7 @@ export class CppCodegenVisitor implements ast.Visitor {
   private declaredVars = new Set<string>();
   private declaredClasses = new Set<string>();
   private currentClass: string | null = null;
+  private headers = new Set<string>();
 
   getCode(): string {
     return this.output.join('\n');
@@ -16,74 +17,56 @@ export class CppCodegenVisitor implements ast.Visitor {
   }
 
   Program(node: ast.ProgramNode) {
-    this.emit('#include <iostream>');
-    this.emit('#include <string>');
-    this.emit('#include <vector>');
-    this.emit('#include <any>');
-    this.emit('#include <map>');
-    this.emit('#include <variant>');
-    this.emit('#include <memory>');
+    this.output = [];
+    this.headers.clear();
+    this.declaredVars.clear();
+    this.declaredClasses.clear();
+    this.currentClass = null;
+
+    const declarations = node.body.filter(
+      (stmt) => stmt.type === 'ClassDeclaration' || stmt.type === 'FunctionDeclaration'
+    );
+    const mainStatements = node.body.filter(
+      (stmt) => stmt.type !== 'ClassDeclaration' && stmt.type !== 'FunctionDeclaration'
+    );
+
+    // Dry run to populate headers, suppressing output
+    const originalEmit = this.emit;
+    this.emit = () => {};
+    node.body.forEach(stmt => stmt.accept(this));
+    this.emit = originalEmit;
+
+    // Now build the actual output
+    this.headers.add('<iostream>'); // For std::cout
+    Array.from(this.headers).sort().forEach(h => this.emit(`#include ${h}`));
     this.emit('');
-    this.emit('// Forward declaration for recursive structures');
-    this.emit('void print_any(const std::any& value);');
+    this.emit('using namespace std;');
     this.emit('');
 
     // Forward-declare all classes
-    node.body.forEach(stmt => {
+    declarations.forEach(stmt => {
       if (stmt.type === 'ClassDeclaration') {
         const className = (stmt as ast.ClassDeclarationNode).name.name;
         this.emit(`struct ${className};`);
         this.declaredClasses.add(className);
       }
     });
-    this.emit('');
+    if (this.declaredClasses.size > 0) this.emit('');
 
-    this.emit('void print_any(const std::any& value) {');
-    this.emit('  if (!value.has_value()) { std::cout << "null"; return; }');
-    this.emit('  if (value.type() == typeid(int)) { std::cout << std::any_cast<int>(value); }');
-    this.emit('  else if (value.type() == typeid(double)) { std::cout << std::any_cast<double>(value); }');
-    this.emit('  else if (value.type() == typeid(bool)) { std::cout << (std::any_cast<bool>(value) ? "true" : "false"); }');
-    this.emit('  else if (value.type() == typeid(const char*)) { std::cout << "\"" << std::any_cast<const char*>(value) << "\""; }');
-    this.emit('  else if (value.type() == typeid(std::string)) { std::cout << "\"" << std::any_cast<std::string>(value) << "\""; }');
-    this.emit('  else if (value.type() == typeid(std::vector<std::any>)) {');
-    this.emit('    const auto& vec = std::any_cast<const std::vector<std::any>&>(value);');
-    this.emit('    std::cout << "[";');
-    this.emit('    for (size_t i = 0; i < vec.size(); ++i) { print_any(vec[i]); if (i < vec.size() - 1) std::cout << ", "; }');
-    this.emit('    std::cout << "]";');
-    this.emit('  } else if (value.type() == typeid(std::map<std::string, std::any>)) {');
-    this.emit('    const auto& map = std::any_cast<const std::map<std::string, std::any>&>(value);');
-    this.emit('    std::cout << "{";');
-    this.emit('    size_t i = 0;');
-    this.emit('    for (const auto& pair : map) { std::cout << "\"" << pair.first << "\": "; print_any(pair.second); if (i < map.size() - 1) std::cout << ", "; i++; }');
-    this.emit('    std::cout << "}";');
-    this.declaredClasses.forEach(name => {
-      this.emit(`  }} else if (value.type() == typeid(std::shared_ptr<${name}>)) {`);
-      this.emit(`    std::cout << "[instance of ${name}]";`);
-    });
-    this.emit('  } else { std::cout << "unsupported_type"; }');
-    this.emit('}');
-    this.emit('');
-    this.emit('using namespace std;');
-    this.emit('');
-
-    // Hoist class and function declarations
-    node.body.forEach(stmt => {
-      if (stmt.type === 'ClassDeclaration' || stmt.type === 'FunctionDeclaration') {
-        stmt.accept(this);
-        this.emit('');
-      }
+    // Emit definitions for classes and functions
+    this.declaredVars.clear();
+    declarations.forEach(stmt => {
+      stmt.accept(this);
+      this.emit('');
     });
 
+    // Emit main function
     this.emit('int main() {');
     this.indentLevel++;
-
-    this.declaredVars.clear();
-    node.body.forEach(stmt => {
-      if (stmt.type !== 'FunctionDeclaration' && stmt.type !== 'ClassDeclaration') {
-        stmt.accept(this);
-      }
+    this.declaredVars.clear(); // Reset for main scope
+    mainStatements.forEach(stmt => {
+      stmt.accept(this);
     });
-
     this.emit('return 0;');
     this.indentLevel--;
     this.emit('}');
@@ -175,17 +158,19 @@ export class CppCodegenVisitor implements ast.Visitor {
   }
 
   FunctionDeclaration(node: ast.FunctionDeclarationNode) {
+    this.headers.add('<any>');
     const fnName = node.name.name;
-    const params = node.params.map(p => `int ${p.name}`).join(', ');
-    this.emit(`int ${fnName}(${params})`); // Assume int return for now
+    const params = node.params.map(p => `std::any ${p.name}`).join(', ');
+    this.emit(`std::any ${fnName}(${params})`);
     node.body.accept(this);
   }
 
   ReturnStatement(node: ast.ReturnStatementNode) {
+    this.headers.add('<any>');
     if (node.argument) {
       this.emit(`return ${this.genExpression(node.argument)};`);
     } else {
-      this.emit('return 0;'); // Default return for void functions, but we assume int
+      this.emit('return {};'); // Return default-constructed std::any
     }
   }
 
@@ -224,9 +209,13 @@ export class CppCodegenVisitor implements ast.Visitor {
   VariableDeclaration(node: ast.VariableDeclarationNode) {
     const varName = node.identifier.name;
     if (!this.declaredVars.has(varName)) {
-      const initValue = node.initializer ?
-        this.genExpression(node.initializer) : '0';
-      this.emit(`auto ${varName} = ${initValue};`);
+      if (node.initializer) {
+        const initValue = this.genExpression(node.initializer);
+        this.emit(`auto ${varName} = ${initValue};`);
+      } else {
+        this.headers.add('<any>');
+        this.emit(`std::any ${varName};`);
+      }
       this.declaredVars.add(varName);
     }
   }
@@ -287,17 +276,14 @@ export class CppCodegenVisitor implements ast.Visitor {
         (callNode.callee as ast.MemberExpressionNode).property.type === 'Identifier' &&
         ((callNode.callee as ast.MemberExpressionNode).property as ast.IdentifierNode).name === 'log'
       ) {
+        this.headers.add('<iostream>');
         const args = callNode.arguments;
         if (args.length > 0) {
-          for (let i = 0; i < args.length; i++) {
-            const arg = args[i];
-            this.emit(`print_any(${this.genExpression(arg)});`);
-            if (i < args.length - 1) {
-              this.emit(`std::cout << " ";`);
-            }
-          }
+          const cppArgs = args.map(arg => this.genExpression(arg));
+          this.emit(`std::cout << ${cppArgs.join(' << " " << ')} << std::endl;`);
+        } else {
+          this.emit('std::cout << std::endl;');
         }
-        this.emit(`std::cout << std::endl;`);
         return;
       }
     }
@@ -318,12 +304,14 @@ export class CppCodegenVisitor implements ast.Visitor {
       case 'NumericLiteral':
         return String((node as ast.NumericLiteralNode).value);
       case 'StringLiteral':
+        this.headers.add('<string>');
         return `std::string("${(node as ast.StringLiteralNode).value}")`;
       case 'BooleanLiteral':
         return (node as ast.BooleanLiteralNode).value ? 'true' : 'false';
       case 'ThisExpression':
         return 'this';
       case 'NewExpression': {
+        this.headers.add('<memory>');
         const newNode = node as ast.NewExpressionNode;
         const callee = this.genExpression(newNode.callee);
         const args = newNode.arguments.map(arg => this.genExpression(arg)).join(', ');
@@ -369,11 +357,16 @@ export class CppCodegenVisitor implements ast.Visitor {
         }
       }
       case 'ArrayExpression': {
+        this.headers.add('<vector>');
+        this.headers.add('<any>');
         const arrayNode = node as ast.ArrayExpressionNode;
         const elements = arrayNode.elements.map(el => this.genExpression(el)).join(', ');
         return `std::vector<std::any>{${elements}}`;
       }
       case 'ObjectExpression': {
+        this.headers.add('<map>');
+        this.headers.add('<string>');
+        this.headers.add('<any>');
         const objNode = node as ast.ObjectExpressionNode;
         const props = objNode.properties.map(p => {
           let key;
