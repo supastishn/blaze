@@ -1,14 +1,10 @@
-name: Build and Release
+name: Build and Upload Artifacts
 
 on:
+  push:
+    branches:
+      - master
   workflow_dispatch:
-    inputs:
-      tag:
-        description: 'The tag for the release, e.g. v1.0.1'
-        required: true
-
-permissions:
-  contents: write
 
 jobs:
   build:
@@ -60,63 +56,3 @@ jobs:
           name: ts2cpp-binary-${{ matrix.name }}
           path: dist-sea/
 
-  release:
-    name: Create Release
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts/
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.event.inputs.tag }}
-          release_name: Release ${{ github.event.inputs.tag }}
-          draft: false
-          prerelease: false
-
-      - name: Upload Linux x64 binary
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/ts2cpp-binary-linux-x64/ts2cpp-linux-x64
-          asset_name: ts2cpp-linux-x64
-          asset_content_type: application/octet-stream
-
-      - name: Upload Linux arm64 binary
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/ts2cpp-binary-linux-arm64/ts2cpp-linux-arm64
-          asset_name: ts2cpp-linux-arm64
-          asset_content_type: application/octet-stream
-
-      - name: Upload Linux arm64 (Termux) binary
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/ts2cpp-binary-linux-arm64-termux/ts2cpp-linux-arm64-termux
-          asset_name: ts2cpp-linux-arm64-termux
-          asset_content_type: application/octet-stream
-
-      - name: Upload Windows x64 binary
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/ts2cpp-binary-windows-x64/ts2cpp-windows-x64.exe
-          asset_name: ts2cpp-windows-x64.exe
-          asset_content_type: application/octet-stream
