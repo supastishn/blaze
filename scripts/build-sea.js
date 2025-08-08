@@ -2,7 +2,7 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const mainScript = path.join(__dirname, '..', 'dist', 'cli', 'index.js');
+const mainScript = path.join(__dirname, '..', 'dist', 'sea-bundle.js');
 const outputDir = path.join(__dirname, '..', 'dist-sea');
 const seaConfigPath = path.join(__dirname, '..', 'sea-config.json');
 
