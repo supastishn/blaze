@@ -1,13 +1,15 @@
-import { PrintVisitor } from './src/parser/PrintVisitor';
-import * as ast from './src/parser/ast';
+// A simple example to test the ts2cpp compiler
+console.log("--- ts2cpp execution test ---");
 
-const astRoot: ast.ProgramNode = {
-  type: 'Program',
-  body: [
-    { type: 'Identifier', name: 'x', accept: ast.IdentifierNode.prototype.accept },
-    { type: 'NumericLiteral', value: 42, accept: ast.NumericLiteralNode.prototype.accept },
-  ],
-  accept: ast.ProgramNode.prototype.accept
-};
+let a = 10;
+let b = 20;
+let sum = a + b;
+console.log("The sum of a and b is:", sum);
 
-astRoot.accept(new PrintVisitor());
+if (sum > 20) {
+    console.log("The sum is greater than 20.");
+} else {
+    console.log("The sum is not greater than 20.");
+}
+
+console.log("Test finished.");
