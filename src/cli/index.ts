@@ -30,4 +30,6 @@ cli
     }
   });
 
-cli.parse(process.argv);
+(async () => {
+  await cli.parseAsync(process.argv);
+})();
