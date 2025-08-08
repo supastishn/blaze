@@ -300,7 +300,6 @@ class Parser {
             body,
             accept(visitor) {
                 visitor.Program(this);
-                this.body.forEach(child => child.accept(visitor));
             }
         };
     }

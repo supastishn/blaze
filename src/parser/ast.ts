@@ -53,7 +53,6 @@ export class ProgramNode extends NodeBase {
 
   accept(visitor: Visitor) {
     visitor.Program(this);
-    this.body.forEach((child: Node) => child.accept(visitor));
   }
 }
 

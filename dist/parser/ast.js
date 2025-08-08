@@ -13,7 +13,6 @@ class ProgramNode extends NodeBase {
     }
     accept(visitor) {
         visitor.Program(this);
-        this.body.forEach((child) => child.accept(visitor));
     }
 }
 exports.ProgramNode = ProgramNode;

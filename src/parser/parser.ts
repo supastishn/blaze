@@ -354,7 +354,6 @@ export class Parser {
       body, 
       accept(visitor: ast.Visitor) {
         visitor.Program(this);
-        this.body.forEach(child => child.accept(visitor));
       }
     } as ast.ProgramNode;
   }
