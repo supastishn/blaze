@@ -54,15 +54,40 @@ class Lexer {
         this.input = input;
     }
     nextToken() {
-        while (/\s/.test(this.peek())) {
-            if (this.peek() === '\n') {
-                this.line++;
-                this.column = 0;
+        while (true) {
+            // Skip whitespace
+            while (/\s/.test(this.peek())) {
+                if (this.peek() === '\n') {
+                    this.line++;
+                    this.column = 0;
+                }
+                else {
+                    this.column++;
+                }
+                this.position++;
             }
-            else {
-                this.column++;
+            // Skip comments
+            if (this.peek() === '/' && this.peek(1) === '/') {
+                while (this.peek() !== '\n' && this.position < this.input.length) {
+                    this.advance();
+                }
+                continue; // Restart the loop to handle what's next
             }
-            this.position++;
+            if (this.peek() === '/' && this.peek(1) === '*') {
+                this.advance(); // consume /
+                this.advance(); // consume *
+                while (!(this.peek() === '*' && this.peek(1) === '/') && this.position < this.input.length) {
+                    if (this.peek() === '\n') {
+                        this.line++;
+                        this.column = 0;
+                    }
+                    this.advance();
+                }
+                this.advance(); // consume *
+                this.advance(); // consume /
+                continue; // Restart the loop
+            }
+            break; // No more whitespace or comments
         }
         if (this.position >= this.input.length) {
             return { type: 'EOF', value: '', line: this.line, column: this.column };
@@ -264,10 +289,10 @@ class Lexer {
         this.advance(); // consume closing "
         return { type: 'StringLiteral', value, line: this.line, column: startCol };
     }
-    peek() {
-        if (this.position >= this.input.length)
+    peek(offset = 0) {
+        if (this.position + offset >= this.input.length)
             return '';
-        return this.input.charAt(this.position);
+        return this.input.charAt(this.position + offset);
     }
     advance() {
         this.position++;
