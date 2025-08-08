@@ -1,6 +1,6 @@
 {
   "name": "ts2cpp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "TypeScript to C++ Compiler",
   "main": "dist/compiler/index.js",
   "scripts": {

@@ -9,7 +9,7 @@ const cli = new Command();
 cli
   .name('ts2cpp')
   .description('TypeScript to C++ Compiler')
-  .version('1.0.0');
+  .version('1.0.1');
 
 cli
   .command('compile <source>')
