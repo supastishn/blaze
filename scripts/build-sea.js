@@ -15,7 +15,9 @@ function build(targetPlatform) {
     // Determine path to node executable
     let nodePath;
     const localPlatform = `${process.platform}-${process.arch}`;
-    if (targetPlatform === localPlatform) {
+    // Use local node executable if we are on Termux and building for Termux,
+    // or if the target platform is the local platform.
+    if (targetPlatform === localPlatform || (targetPlatform === 'linux-arm64-termux' && localPlatform === 'linux-arm64')) {
         nodePath = process.execPath;
     } else {
         const nodeBinaryName = targetPlatform.startsWith('win') ? 'node.exe' : 'node';
@@ -89,11 +91,18 @@ function build(targetPlatform) {
         build(process.env.TARGET_PLATFORM);
     } else {
         // Local development `npm run package` - build for multiple platforms
+        const localPlatform = `${process.platform}-${process.arch}`;
         const platformsToBuild = [
-            `${process.platform}-${process.arch}`,
+            localPlatform,
+            'linux-x64',
             'linux-arm64-termux',
             'windows-x64',
         ];
+        
+        // When on Termux, the local build should be the termux-patched one.
+        if (localPlatform === 'linux-arm64') {
+            platformsToBuild[platformsToBuild.indexOf(localPlatform)] = 'linux-arm64-termux';
+        }
         const uniquePlatforms = [...new Set(platformsToBuild)];
 
         for (const platform of uniquePlatforms) {
