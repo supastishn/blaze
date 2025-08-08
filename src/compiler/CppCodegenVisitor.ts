@@ -30,14 +30,15 @@ export class CppCodegenVisitor implements ast.Visitor {
       (stmt) => stmt.type !== 'ClassDeclaration' && stmt.type !== 'FunctionDeclaration'
     );
 
-    // Dry run to populate headers, suppressing output
+    // First pass: collect headers without emitting code
     const originalEmit = this.emit;
-    this.emit = () => {};
+    this.emit = () => {}; // Suppress output
     node.body.forEach(stmt => stmt.accept(this));
-    this.emit = originalEmit;
+    this.emit = originalEmit; // Restore emit function
 
     // Now build the actual output
     this.headers.add('<iostream>'); // For std::cout
+    this.headers.add('<string>'); // Often needed
     Array.from(this.headers).sort().forEach(h => this.emit(`#include ${h}`));
     this.emit('');
     this.emit('using namespace std;');
