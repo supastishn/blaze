@@ -63,14 +63,41 @@ export class Lexer {
   constructor(private readonly input: string) {}
 
   nextToken(): Token {
-    while (/\s/.test(this.peek())) {
-      if (this.peek() === '\n') {
-        this.line++;
-        this.column = 0;
-      } else {
-        this.column++;
+    while (true) {
+      // Skip whitespace
+      while (/\s/.test(this.peek())) {
+        if (this.peek() === '\n') {
+          this.line++;
+          this.column = 0;
+        } else {
+          this.column++;
+        }
+        this.position++;
       }
-      this.position++;
+
+      // Skip comments
+      if (this.peek() === '/' && this.peek(1) === '/') {
+        while (this.peek() !== '\n' && this.position < this.input.length) {
+          this.advance();
+        }
+        continue; // Restart the loop to handle what's next
+      }
+      if (this.peek() === '/' && this.peek(1) === '*') {
+        this.advance(); // consume /
+        this.advance(); // consume *
+        while (!(this.peek() === '*' && this.peek(1) === '/') && this.position < this.input.length) {
+          if (this.peek() === '\n') {
+            this.line++;
+            this.column = 0;
+          }
+          this.advance();
+        }
+        this.advance(); // consume *
+        this.advance(); // consume /
+        continue; // Restart the loop
+      }
+
+      break; // No more whitespace or comments
     }
 
     if (this.position >= this.input.length) {
@@ -289,9 +316,9 @@ export class Lexer {
     return { type: 'StringLiteral', value, line: this.line, column: startCol };
   }
 
-  private peek(): string {
-    if (this.position >= this.input.length) return '';
-    return this.input.charAt(this.position);
+  private peek(offset: number = 0): string {
+    if (this.position + offset >= this.input.length) return '';
+    return this.input.charAt(this.position + offset);
   }
 
   private advance(): void {
